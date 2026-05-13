@@ -40,17 +40,13 @@
             border: 1px solid rgba(120, 120, 120, 0.1);
         }
 
-        /* КОРРЕКЦИЯ ОТСТУПОВ ШАПКИ */
         header {
-            padding-top: 3.5rem !important; /* Отступ под челку/статус-бар */
+            padding-top: 3.5rem !important;
             padding-bottom: 0.75rem !important;
         }
 
-        /* КОРРЕКЦИЯ ОТСТУПОВ КОНТЕНТА */
-        /* КОРРЕКЦИЯ ОТСТУПОВ КОНТЕНТА */
-
         main {
-            padding-top: 0.5rem !important; /* Было 1.5rem, уменьшили до минимума */
+            padding-top: 0.5rem !important;
         }
 
         .page { display: none; animation: pageIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
@@ -64,24 +60,15 @@
         .nav-btn.active { color: var(--accent); transform: scale(1.1); }
         .tab-bar { padding-bottom: env(safe-area-inset-bottom); }
 
-        /* Canvas Styles */
         .canvas-container { margin: 0 auto !important; border-radius: 30px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        input::placeholder, textarea::placeholder { color: #666; }
     </style>
 </head>
 <body class="dark">
 
-    <!-- ONBOARDING -->
-    <section id="page-onboarding" class="page active min-h-screen flex items-center px-8">
-        <div class="max-w-md mx-auto w-full">
-            <div id="quiz-step-content">
-                <!-- Контент генерируется JS -->
-            </div>
-        </div>
-    </section>
-
-    <!-- MAIN APP WRAPPER (HIDDEN UNTIL ONBOARDING DONE) -->
-    <div id="main-interface" class="hidden">
+    <div id="main-interface">
         
         <!-- HEADER -->
         <header class="fixed top-0 left-0 right-0 z-40 px-6 glass">
@@ -94,13 +81,10 @@
             </div>
         </header>
 
-        <!-- ОСНОВНОЙ КОНТЕНТ С УМЕНЬШЕННЫМ PT-16 (вместо pt-32) -->
-       <!-- ОСНОВНОЙ КОНТЕНТ -->
-        <!-- Изменено: mt-20 заменен на mt-12 (соответствует высоте шапки) -->
         <main class="pt-16 pb-32 px-6 max-w-2xl mx-auto mt-12">
-                    
+            
             <!-- HOME PAGE -->
-            <section id="view-home" class="page">
+            <section id="view-home" class="page active">
                 <div class="glass rounded-[35px] p-6 mb-8">
                     <div class="flex justify-between items-start mb-6">
                         <div>
@@ -119,7 +103,7 @@
                     <h3 class="text-sm font-bold flex items-center gap-2 mb-4">
                         <i data-lucide="sparkles" class="w-4 h-4"></i> AI СОВЕТ ДНЯ
                     </h3>
-                    <p id="ai-daily-advice" class="text-lg font-light leading-snug">Загрузите вещи, чтобы AI мог дать вам совет по стилю на основе погоды.</p>
+                    <p id="ai-daily-advice" class="text-lg font-light leading-snug">Загрузите вещи, чтобы AI мог дать вам совет по стилю.</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -136,56 +120,47 @@
 
             <!-- CLOSET PAGE -->
             <section id="view-closet" class="page">
-                <div class="flex justify-between items-center mb-8">
-                    <h2 class="text-3xl font-bold tracking-tight">Гардероб</h2>
-                    <div class="flex gap-2">
-                        <input type="text" id="closet-search" placeholder="Поиск..." class="glass px-4 py-2 rounded-full text-xs outline-none">
-                    </div>
-                </div>
-                
-                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6">
-                    <button class="cat-btn active px-5 py-2 glass rounded-full text-[10px] font-bold uppercase" onclick="filterCloset('all')">Все</button>
-                    <button class="cat-btn px-5 py-2 glass rounded-full text-[10px] font-bold uppercase" onclick="filterCloset('верх')">Верх</button>
-                    <button class="cat-btn px-5 py-2 glass rounded-full text-[10px] font-bold uppercase" onclick="filterCloset('низ')">Низ</button>
-                    <button class="cat-btn px-5 py-2 glass rounded-full text-[10px] font-bold uppercase" onclick="filterCloset('обувь')">Обувь</button>
-                </div>
-
+                <h2 class="text-3xl font-bold mb-6">Гардероб</h2>
                 <div id="closet-grid" class="grid grid-cols-2 gap-4"></div>
             </section>
 
             <!-- EDITOR PAGE -->
             <section id="view-editor" class="page">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold">Конструктор</h2>
-                    <button onclick="saveOutfit()" class="bg-white text-black px-4 py-2 rounded-full text-[10px] font-bold uppercase">Сохранить</button>
-                </div>
+                <h2 class="text-xl font-bold mb-6">Конструктор</h2>
                 <div class="flex justify-center mb-8">
                     <canvas id="outfit-canvas"></canvas>
                 </div>
                 <div id="editor-inventory" class="flex gap-4 overflow-x-auto no-scrollbar glass p-4 rounded-[30px]"></div>
-            </section>
-
-            <!-- AI OUTFIT PAGE -->
-            <section id="view-ai" class="page">
-                <h2 class="text-3xl font-bold mb-6">AI Стилист</h2>
-                <div class="glass rounded-[35px] p-6 mb-6">
-                    <textarea id="ai-request" placeholder="Например: хочу образ на холодную погоду в стиле old money..." class="w-full bg-transparent border-none outline-none resize-none text-lg font-light h-32"></textarea>
-                    <button onclick="generateAIOutfit()" class="w-full bg-white text-black py-4 rounded-2xl font-bold mt-4 hover:scale-[0.98] transition">Создать образ</button>
-                </div>
-                <div id="ai-result" class="hidden glass rounded-[35px] p-6 border-white/20 border-2">
-                    <!-- AI Result -->
-                </div>
+                <button onclick="saveOutfit()" class="w-full mt-4 bg-white text-black py-4 rounded-2xl font-bold">Сохранить образ</button>
             </section>
 
             <!-- PROFILE PAGE -->
             <section id="view-profile" class="page">
-                <div class="text-center mb-10">
-                    <div class="w-24 h-24 bg-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center">
-                        <i data-lucide="user" class="w-10 h-10"></i>
+                <div class="flex flex-col items-center mb-10">
+                    <!-- Avatar Upload -->
+                    <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-input').click()">
+                        <div id="avatar-preview" class="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center overflow-hidden border-2 border-white/10">
+                            <i data-lucide="camera" id="camera-icon" class="w-8 h-8 text-gray-500"></i>
+                        </div>
+                        <div class="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                            <span class="text-[10px] font-bold uppercase tracking-tighter text-white">Изменить</span>
+                        </div>
                     </div>
-                    <h2 id="profile-style" class="text-2xl font-bold tracking-tight">--</h2>
-                    <p class="text-gray-500 text-sm">Ваш стиль</p>
+                    <input type="file" id="avatar-input" class="hidden" accept="image/*" onchange="handleAvatarUpload(event)">
+                    
+                    <div class="w-full mt-8 space-y-4">
+                        <div class="glass p-5 rounded-[25px]">
+                            <label class="text-[10px] uppercase text-gray-500 font-bold mb-2 block">Имя</label>
+                            <input type="text" id="user-name" placeholder="Ваше имя..." class="w-full bg-transparent border-none outline-none text-xl font-bold" oninput="saveUserData()">
+                        </div>
+
+                        <div class="glass p-5 rounded-[25px]">
+                            <label class="text-[10px] uppercase text-gray-500 font-bold mb-2 block">Обо мне / Стиль</label>
+                            <textarea id="user-bio" placeholder="Предпочтения, рост, стиль..." class="w-full bg-transparent border-none outline-none text-base font-light h-24 resize-none" oninput="saveUserData()"></textarea>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="grid grid-cols-2 gap-4 mb-10">
                     <div class="glass p-6 rounded-[30px] text-center">
                         <span id="stat-items" class="text-2xl font-bold">0</span>
@@ -196,7 +171,8 @@
                         <p class="text-[10px] uppercase text-gray-500 mt-1">Образов</p>
                     </div>
                 </div>
-                <button onclick="resetApp()" class="w-full py-4 text-red-500 text-sm font-bold">Сбросить все данные</button>
+
+                <button onclick="resetApp()" class="w-full py-4 text-red-500 text-sm font-bold border border-red-500/20 rounded-2xl">Сбросить все данные</button>
             </section>
 
         </main>
@@ -206,7 +182,7 @@
             <button onclick="showPage('home')" class="nav-btn text-gray-400" id="btn-home"><i data-lucide="home"></i></button>
             <button onclick="showPage('closet')" class="nav-btn text-gray-400" id="btn-closet"><i data-lucide="shirt"></i></button>
             <button onclick="showPage('editor')" class="nav-btn text-gray-400" id="btn-editor"><i data-lucide="combine"></i></button>
-            <button onclick="showPage('ai')" class="nav-btn text-gray-400" id="btn-ai"><i data-lucide="sparkles"></i></button>
+            <button onclick="showPage('profile')" class="nav-btn text-gray-400" id="btn-profile"><i data-lucide="user"></i></button>
         </nav>
     </div>
 
@@ -214,23 +190,18 @@
     <input type="file" id="upload-input" class="hidden" accept="image/*" onchange="handleFileUpload(event)">
 
     <script>
-        // --- CONFIG & GLOBAL VARS ---
-        const GEMINI_KEY = 'YOUR_API_KEY';
         const WEATHER_KEY = 'd73f839eb883d8a9f75cf9433fb4713e';
-        let db, canvas, userSettings = {};
+        let db, canvas;
 
-        // --- CORE INITIALIZATION ---
+        // --- ИНИЦИАЛИЗАЦИЯ ---
         window.onload = async () => {
             initDB();
             lucide.createIcons();
-            loadSettings();
             initTheme();
-            
-            if (localStorage.getItem('onboarding_done')) {
-                startApp();
-            } else {
-                renderOnboarding();
-            }
+            initCanvas();
+            initWeather();
+            loadUserData();
+            showPage('home');
         };
 
         function initDB() {
@@ -239,237 +210,149 @@
                 e.target.result.createObjectStore('items', { keyPath: 'id' });
                 e.target.result.createObjectStore('outfits', { keyPath: 'id' });
             };
-            request.onsuccess = (e) => db = e.target.result;
-        }
-
-        function initTheme() {
-            const theme = localStorage.getItem('theme') || 'dark';
-            document.body.className = theme;
-        }
-
-        function toggleTheme() {
-            const isDark = document.body.classList.contains('dark');
-            const newTheme = isDark ? 'light' : 'dark';
-            document.body.className = newTheme;
-            localStorage.setItem('theme', newTheme);
-        }
-
-        function loadSettings() {
-            userSettings = JSON.parse(localStorage.getItem('user_settings')) || {};
-        }
-
-        let currentStep = 0;
-        const quiz = [
-            { q: "Ваш пол?", id: 'gender', opts: ['Мужской', 'Женский', 'Другое'] },
-            { q: "Ваш стиль?", id: 'style', opts: ['Casual', 'Streetwear', 'Old Money', 'Sport', 'Minimalism'] },
-            { q: "Как вы обычно одеваетесь?", id: 'context', opts: ['На учёбу', 'На работу', 'Повседневно', 'Модно'] }
-        ];
-
-        function renderOnboarding() {
-            const step = quiz[currentStep];
-            const content = document.getElementById('quiz-step-content');
-            content.innerHTML = `
-                <p class="text-[10px] uppercase tracking-[0.3em] text-gray-500 mb-4">Шаг ${currentStep + 1} из 3</p>
-                <h2 class="text-4xl font-bold tracking-tighter mb-10 leading-tight">${step.q}</h2>
-                <div class="grid gap-4">
-                    ${step.opts.map(opt => `
-                        <button onclick="saveQuizStep('${step.id}', '${opt}')" class="w-full py-6 glass rounded-3xl text-left px-8 font-semibold hover:bg-white hover:text-black transition-all">
-                            ${opt}
-                        </button>
-                    `).join('')}
-                </div>
-                <button onclick="startApp()" class="w-full mt-10 text-gray-500 text-sm font-medium">Пропустить</button>
-            `;
-        }
-
-        function saveQuizStep(id, val) {
-            userSettings[id] = val;
-            currentStep++;
-            if (currentStep < quiz.length) renderOnboarding();
-            else startApp();
-        }
-
-        function startApp() {
-            localStorage.setItem('onboarding_done', 'true');
-            localStorage.setItem('user_settings', JSON.stringify(userSettings));
-            document.getElementById('page-onboarding').classList.remove('active');
-            document.getElementById('main-interface').classList.remove('hidden');
-            
-            showPage('home');
-            initWeather();
-            initCanvas();
-            renderCloset();
-            updateStats();
-        }
-
-        function showPage(pageId) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            
-            const target = document.getElementById(`view-${pageId}`);
-            if (target) target.classList.add('active');
-            
-            const btn = document.getElementById(`btn-${pageId}`);
-            if (btn) btn.classList.add('active');
-            
-            if (pageId === 'profile') {
-                document.getElementById('profile-style').innerText = userSettings.style || 'Не определен';
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                renderCloset();
                 updateStats();
+            };
+        }
+
+        // --- ПРОФИЛЬ И ДАННЫЕ ---
+        function handleAvatarUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const base64 = event.target.result;
+                localStorage.setItem('user_avatar', base64);
+                displayAvatar(base64);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function displayAvatar(base64) {
+            const preview = document.getElementById('avatar-preview');
+            const icon = document.getElementById('camera-icon');
+            if (base64) {
+                preview.innerHTML = `<img src="${base64}" class="w-full h-full object-cover">`;
             }
         }
 
-        function initWeather() {
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const { latitude: lat, longitude: lon } = pos.coords;
-                const res = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
-                const data = await res.json();
-                
-                document.getElementById('weather-city').innerText = data.city.name;
-                document.getElementById('weather-temp').innerText = Math.round(data.list[0].main.temp) + '°';
-                document.getElementById('weather-desc').innerText = data.list[0].weather[0].description;
-                document.getElementById('weather-hum').innerText = data.list[0].main.humidity;
-
-                const forecast = document.getElementById('weather-forecast');
-                forecast.innerHTML = data.list.slice(0, 6).map(item => `
-                    <div class="glass min-w-[80px] p-4 rounded-2xl text-center">
-                        <p class="text-[10px] text-gray-500 mb-1">${item.dt_txt.split(' ')[1].slice(0,5)}</p>
-                        <p class="font-bold">${Math.round(item.main.temp)}°</p>
-                    </div>
-                `).join('');
-
-                generateDailyAdvice(data.list[0]);
-            });
+        function saveUserData() {
+            const data = {
+                name: document.getElementById('user-name').value,
+                bio: document.getElementById('user-bio').value
+            };
+            localStorage.setItem('user_data', JSON.stringify(data));
         }
 
-        function triggerUpload() { document.getElementById('upload-input').click(); }
+        function loadUserData() {
+            const savedData = JSON.parse(localStorage.getItem('user_data') || '{}');
+            document.getElementById('user-name').value = savedData.name || '';
+            document.getElementById('user-bio').value = savedData.bio || '';
+            displayAvatar(localStorage.getItem('user_avatar'));
+        }
 
+        // --- НАВИГАЦИЯ И ИНТЕРФЕЙС ---
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`view-${pageId}`).classList.add('active');
+            document.getElementById(`btn-${pageId}`).classList.add('active');
+            if (pageId === 'profile') updateStats();
+        }
+
+        function toggleTheme() {
+            const theme = document.body.classList.contains('dark') ? 'light' : 'dark';
+            document.body.className = theme;
+            localStorage.setItem('theme', theme);
+        }
+
+        function initTheme() {
+            document.body.className = localStorage.getItem('theme') || 'dark';
+        }
+
+        // --- ФУНКЦИОНАЛ ---
         async function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-
-            Swal.fire({ title: 'AI Обработка...', text: 'Удаляем фон и анализируем вещь', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
+            Swal.fire({ title: 'Обработка...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             try {
                 const blob = await imglyRemoveBackground(file);
                 const reader = new FileReader();
                 reader.readAsDataURL(blob);
-                reader.onloadend = async () => {
-                    const base64 = reader.result;
-                    
-                    const { value: category } = await Swal.fire({
-                        title: 'Категория',
-                        input: 'select',
-                        inputOptions: { 'верх': 'Верх', 'низ': 'Низ', 'обувь': 'Обувь', 'куртки': 'Куртки', 'аксессуары': 'Аксессуары' },
-                        background: '#111', color: '#fff'
-                    });
-
-                    const item = { id: Date.now(), img: base64, category, date: new Date().toISOString() };
+                reader.onloadend = () => {
+                    const item = { id: Date.now(), img: reader.result, category: 'all' };
                     const tx = db.transaction('items', 'readwrite');
                     tx.objectStore('items').add(item);
-                    tx.oncomplete = () => {
-                        renderCloset();
-                        Swal.fire({ icon: 'success', title: 'Добавлено!' });
-                    };
+                    tx.oncomplete = () => { renderCloset(); Swal.close(); };
                 };
-            } catch (err) {
-                console.error(err);
-                Swal.fire('Ошибка AI', 'Не удалось обработать фото', 'error');
-            }
+            } catch (err) { Swal.fire('Ошибка', 'Не удалось удалить фон', 'error'); }
         }
 
-        async function renderCloset(filter = 'all') {
+        function renderCloset() {
             const tx = db.transaction('items', 'readonly');
-            const items = await new Promise(r => {
-                const req = tx.objectStore('items').getAll();
-                req.onsuccess = () => r(req.result);
-            });
-
-            const grid = document.getElementById('closet-grid');
-            const editorInv = document.getElementById('editor-inventory');
-            
-            const filtered = filter === 'all' ? items : items.filter(i => i.category === filter);
-            
-            grid.innerHTML = filtered.map(i => `
-                <div class="glass p-4 rounded-[30px] relative group">
-                    <img src="${i.img}" class="w-full aspect-square object-contain">
-                    <button onclick="deleteItem(${i.id})" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-2 bg-red-500/20 rounded-full text-red-500 transition">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            `).join('');
-
-            editorInv.innerHTML = items.map(i => `
-                <img src="${i.img}" onclick="addToCanvas('${i.img}')" class="w-16 h-16 object-contain glass p-2 rounded-xl flex-shrink-0 cursor-pointer">
-            `).join('');
-
-            lucide.createIcons();
+            tx.objectStore('items').getAll().onsuccess = (e) => {
+                const items = e.target.result;
+                document.getElementById('closet-grid').innerHTML = items.map(i => `
+                    <div class="glass p-4 rounded-[30px] relative">
+                        <img src="${i.img}" class="w-full aspect-square object-contain">
+                        <button onclick="deleteItem(${i.id})" class="absolute top-2 right-2 text-red-500"><i data-lucide="x-circle"></i></button>
+                    </div>
+                `).join('');
+                document.getElementById('editor-inventory').innerHTML = items.map(i => `
+                    <img src="${i.img}" onclick="addToCanvas('${i.img}')" class="w-16 h-16 glass p-2 rounded-xl flex-shrink-0 cursor-pointer">
+                `).join('');
+                lucide.createIcons();
+            };
         }
 
         function deleteItem(id) {
-            const tx = db.transaction('items', 'readwrite');
-            tx.objectStore('items').delete(id);
-            tx.oncomplete = () => renderCloset();
+            db.transaction('items', 'readwrite').objectStore('items').delete(id).onsuccess = renderCloset;
         }
 
         function initCanvas() {
             const size = Math.min(window.innerWidth - 60, 400);
-            canvas = new fabric.Canvas('outfit-canvas', {
-                width: size,
-                height: size * 1.2,
-                backgroundColor: 'transparent'
-            });
+            canvas = new fabric.Canvas('outfit-canvas', { width: size, height: size * 1.2 });
         }
 
         function addToCanvas(url) {
             fabric.Image.fromURL(url, (img) => {
                 img.scaleToWidth(150);
-                img.set({ cornerStyle: 'circle', cornerColor: 'white', borderColor: 'white' });
                 canvas.add(img);
-                canvas.setActiveObject(img);
             });
         }
 
         function saveOutfit() {
-            const dataURL = canvas.toDataURL();
-            const tx = db.transaction('outfits', 'readwrite');
-            tx.objectStore('outfits').add({ id: Date.now(), img: dataURL });
-            Swal.fire('Сохранено!', 'Образ добавлен в профиль', 'success');
-        }
-
-        async function generateAIOutfit() {
-            const request = document.getElementById('ai-request').value;
-            const resBox = document.getElementById('ai-result');
-            resBox.classList.remove('hidden');
-            resBox.innerHTML = '<p class="animate-pulse">Стилист думает...</p>';
-
-            setTimeout(() => {
-                resBox.innerHTML = `
-                    <h4 class="font-bold mb-2">Совет AI Стилиста:</h4>
-                    <p class="text-sm font-light leading-relaxed">Учитывая ваш стиль <b>${userSettings.style}</b> и погоду, я рекомендую сочетать светлый верх с темным низом. Это создаст нужный контраст для "${request || 'вашего запроса'}".</p>
-                `;
-            }, 2000);
-        }
-
-        async function generateDailyAdvice(weather) {
-            const adviceEl = document.getElementById('ai-daily-advice');
-            const temp = weather.main.temp;
-            if (temp < 10) adviceEl.innerText = "Сегодня холодно. Рекомендую многослойность: куртка поверх свитера будет отличным решением.";
-            else if (temp > 20) adviceEl.innerText = "Отличная погода для легких тканей и вашего стиля " + userSettings.style;
-            else adviceEl.innerText = "Умеренная температура. Попробуйте сочетать худи с вашим любимым аксессуаром.";
+            const data = canvas.toDataURL();
+            db.transaction('outfits', 'readwrite').objectStore('outfits').add({ id: Date.now(), img: data });
+            Swal.fire('Успех', 'Образ сохранен в профиль', 'success');
         }
 
         function updateStats() {
-            const txItems = db.transaction('items', 'readonly');
-            txItems.objectStore('items').count().onsuccess = (e) => document.getElementById('stat-items').innerText = e.target.result;
-            const txLooks = db.transaction('outfits', 'readonly');
-            txLooks.objectStore('outfits').count().onsuccess = (e) => document.getElementById('stat-looks').innerText = e.target.result;
+            db.transaction('items').objectStore('items').count().onsuccess = (e) => document.getElementById('stat-items').innerText = e.target.result;
+            db.transaction('outfits').objectStore('outfits').count().onsuccess = (e) => document.getElementById('stat-looks').innerText = e.target.result;
+        }
+
+        function initWeather() {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
+                const data = await res.json();
+                document.getElementById('weather-city').innerText = data.name;
+                document.getElementById('weather-temp').innerText = Math.round(data.main.temp) + '°';
+                document.getElementById('weather-desc').innerText = data.weather[0].description;
+            });
         }
 
         function resetApp() {
-            localStorage.clear();
-            indexedDB.deleteDatabase('WardrobeDB');
-            location.reload();
+            if(confirm('Удалить всё?')) {
+                localStorage.clear();
+                indexedDB.deleteDatabase('WardrobeDB');
+                location.reload();
+            }
         }
+        
+        function triggerUpload() { document.getElementById('upload-input').click(); }
     </script>
 </body>
 </html>
