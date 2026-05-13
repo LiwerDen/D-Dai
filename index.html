@@ -40,25 +40,29 @@
             border: 1px solid rgba(120, 120, 120, 0.1);
         }
 
+        /* Увеличенная высота шапки для визуальной легкости */
         header {
-            padding-top: 3.5rem !important;
-            padding-bottom: 0.75rem !important;
+            padding-top: env(safe-area-inset-top, 1.2rem) !important;
+            height: 6rem; 
+            display: flex;
+            align-items: center;
         }
 
+        /* Еще более значительный отступ сверху для контента */
         main {
-            padding-top: 0.5rem !important;
+            padding-top: 7.5rem !important; 
         }
 
         .page { display: none; animation: pageIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         .page.active { display: block; }
 
         @keyframes pageIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .nav-btn.active { color: var(--accent); transform: scale(1.1); }
-        .tab-bar { padding-bottom: env(safe-area-inset-bottom); }
+        .tab-bar { padding-bottom: env(safe-area-inset-bottom, 1.5rem); }
 
         .canvas-container { margin: 0 auto !important; border-radius: 30px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -71,129 +75,127 @@
     <div id="main-interface">
         
         <!-- HEADER -->
-        <header class="fixed top-0 left-0 right-0 z-40 px-6 glass">
-            <div class="max-w-2xl mx-auto flex justify-between items-center">
-                <h1 class="text-xl font-bold tracking-tighter">WARDROBE AI</h1>
-                <div class="flex gap-4">
-                    <button onclick="toggleTheme()"><i data-lucide="sun-moon" class="w-5 h-5"></i></button>
-                    <button onclick="showPage('profile')"><i data-lucide="user" class="w-5 h-5"></i></button>
+        <header class="fixed top-0 left-0 right-0 z-40 px-8 glass">
+            <div class="max-w-2xl mx-auto w-full flex justify-between items-center">
+                <h1 class="text-2xl font-bold tracking-tighter">WARDROBE AI</h1>
+                <div class="flex gap-5">
+                    <button onclick="toggleTheme()"><i data-lucide="sun-moon" class="w-6 h-6"></i></button>
+                    <button onclick="showPage('profile')"><i data-lucide="user" class="w-6 h-6"></i></button>
                 </div>
             </div>
         </header>
 
-        <main class="pt-16 pb-32 px-6 max-w-2xl mx-auto mt-12">
+        <main class="pb-32 px-8 max-w-2xl mx-auto">
             
             <!-- HOME PAGE -->
             <section id="view-home" class="page active">
-                <div class="glass rounded-[35px] p-6 mb-8">
+                <div class="glass rounded-[40px] p-8 mb-8">
                     <div class="flex justify-between items-start mb-6">
                         <div>
-                            <p id="weather-city" class="text-[10px] uppercase tracking-widest text-gray-500">Загрузка...</p>
-                            <h2 id="weather-temp" class="text-5xl font-light tracking-tighter">--°</h2>
+                            <p id="weather-city" class="text-[11px] uppercase tracking-[0.2em] text-gray-500">Загрузка...</p>
+                            <h2 id="weather-temp" class="text-6xl font-light tracking-tighter mt-1">--°</h2>
                         </div>
                         <div class="text-right">
-                            <p id="weather-desc" class="text-sm font-medium">--</p>
-                            <p class="text-[10px] text-gray-500">Влажность: <span id="weather-hum">--</span>%</p>
+                            <p id="weather-desc" class="text-base font-medium">--</p>
+                            <p class="text-[11px] text-gray-500 mt-1">Влажность: <span id="weather-hum">--</span>%</p>
                         </div>
                     </div>
-                    <div id="weather-forecast" class="flex gap-4 overflow-x-auto no-scrollbar pb-2"></div>
+                    <div id="weather-forecast" class="flex gap-5 overflow-x-auto no-scrollbar pb-2"></div>
                 </div>
 
-                <div class="glass rounded-[35px] p-6 mb-8">
-                    <h3 class="text-sm font-bold flex items-center gap-2 mb-4">
+                <div class="glass rounded-[40px] p-8 mb-8">
+                    <h3 class="text-xs font-bold flex items-center gap-2 mb-4 tracking-widest uppercase">
                         <i data-lucide="sparkles" class="w-4 h-4"></i> AI СОВЕТ ДНЯ
                     </h3>
-                    <p id="ai-daily-advice" class="text-lg font-light leading-snug">Загрузите вещи, чтобы AI мог дать вам совет по стилю.</p>
+                    <p id="ai-daily-advice" class="text-xl font-light leading-relaxed">Добавьте одежду в гардероб, чтобы получить персональные рекомендации.</p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <button onclick="triggerUpload()" class="h-40 glass rounded-[30px] flex flex-col items-center justify-center gap-2">
-                        <i data-lucide="plus-circle" class="w-8 h-8"></i>
-                        <span class="text-xs font-semibold">Загрузить</span>
+                <div class="grid grid-cols-2 gap-5">
+                    <button onclick="triggerUpload()" class="h-44 glass rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition">
+                        <i data-lucide="plus-circle" class="w-9 h-9"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider">Загрузить</span>
                     </button>
-                    <button onclick="showPage('closet')" class="h-40 glass rounded-[30px] flex flex-col items-center justify-center gap-2">
-                        <i data-lucide="shirt" class="w-8 h-8"></i>
-                        <span class="text-xs font-semibold">Моя одежда</span>
+                    <button onclick="showPage('closet')" class="h-44 glass rounded-[35px] flex flex-col items-center justify-center gap-3 active:scale-95 transition">
+                        <i data-lucide="shirt" class="w-9 h-9"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider">Гардероб</span>
                     </button>
                 </div>
             </section>
 
             <!-- CLOSET PAGE -->
             <section id="view-closet" class="page">
-                <h2 class="text-3xl font-bold mb-6">Гардероб</h2>
-                <div id="closet-grid" class="grid grid-cols-2 gap-4"></div>
+                <h2 class="text-4xl font-bold mb-8 tracking-tight">Гардероб</h2>
+                <div id="closet-grid" class="grid grid-cols-2 gap-5"></div>
             </section>
 
             <!-- EDITOR PAGE -->
             <section id="view-editor" class="page">
-                <h2 class="text-xl font-bold mb-6">Конструктор</h2>
+                <h2 class="text-2xl font-bold mb-6 tracking-tight">Конструктор образов</h2>
                 <div class="flex justify-center mb-8">
                     <canvas id="outfit-canvas"></canvas>
                 </div>
-                <div id="editor-inventory" class="flex gap-4 overflow-x-auto no-scrollbar glass p-4 rounded-[30px]"></div>
-                <button onclick="saveOutfit()" class="w-full mt-4 bg-white text-black py-4 rounded-2xl font-bold">Сохранить образ</button>
+                <div id="editor-inventory" class="flex gap-5 overflow-x-auto no-scrollbar glass p-6 rounded-[35px]"></div>
+                <button onclick="saveOutfit()" class="w-full mt-6 bg-white text-black py-5 rounded-[25px] font-bold text-sm uppercase tracking-widest active:scale-95 transition">Сохранить образ</button>
             </section>
 
             <!-- PROFILE PAGE -->
             <section id="view-profile" class="page">
                 <div class="flex flex-col items-center mb-10">
-                    <!-- Avatar Upload -->
                     <div class="relative group cursor-pointer" onclick="document.getElementById('avatar-input').click()">
-                        <div id="avatar-preview" class="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center overflow-hidden border-2 border-white/10">
-                            <i data-lucide="camera" id="camera-icon" class="w-8 h-8 text-gray-500"></i>
+                        <div id="avatar-preview" class="w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center overflow-hidden border-2 border-white/10 shadow-2xl">
+                            <i data-lucide="camera" id="camera-icon" class="w-10 h-10 text-gray-500"></i>
                         </div>
                         <div class="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                            <span class="text-[10px] font-bold uppercase tracking-tighter text-white">Изменить</span>
+                            <i data-lucide="edit-3" class="w-6 h-6 text-white"></i>
                         </div>
                     </div>
                     <input type="file" id="avatar-input" class="hidden" accept="image/*" onchange="handleAvatarUpload(event)">
                     
-                    <div class="w-full mt-8 space-y-4">
-                        <div class="glass p-5 rounded-[25px]">
-                            <label class="text-[10px] uppercase text-gray-500 font-bold mb-2 block">Имя</label>
-                            <input type="text" id="user-name" placeholder="Ваше имя..." class="w-full bg-transparent border-none outline-none text-xl font-bold" oninput="saveUserData()">
+                    <div class="w-full mt-10 space-y-4">
+                        <div class="glass p-6 rounded-[30px]">
+                            <label class="text-[11px] uppercase text-gray-500 font-bold mb-2 block tracking-widest">Имя пользователя</label>
+                            <input type="text" id="user-name" placeholder="Введите имя..." class="w-full bg-transparent border-none outline-none text-2xl font-bold" oninput="saveUserData()">
                         </div>
 
-                        <div class="glass p-5 rounded-[25px]">
-                            <label class="text-[10px] uppercase text-gray-500 font-bold mb-2 block">Обо мне / Стиль</label>
-                            <textarea id="user-bio" placeholder="Предпочтения, рост, стиль..." class="w-full bg-transparent border-none outline-none text-base font-light h-24 resize-none" oninput="saveUserData()"></textarea>
+                        <div class="glass p-6 rounded-[30px]">
+                            <label class="text-[11px] uppercase text-gray-500 font-bold mb-2 block tracking-widest">Ваш стиль / Био</label>
+                            <textarea id="user-bio" placeholder="Расскажите о своих предпочтениях..." class="w-full bg-transparent border-none outline-none text-base font-light h-28 resize-none leading-relaxed" oninput="saveUserData()"></textarea>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 mb-10">
-                    <div class="glass p-6 rounded-[30px] text-center">
-                        <span id="stat-items" class="text-2xl font-bold">0</span>
-                        <p class="text-[10px] uppercase text-gray-500 mt-1">Вещей</p>
+                <div class="grid grid-cols-2 gap-5 mb-10">
+                    <div class="glass p-7 rounded-[30px] text-center">
+                        <span id="stat-items" class="text-3xl font-bold">0</span>
+                        <p class="text-[11px] uppercase text-gray-500 font-bold mt-2 tracking-widest">Вещей</p>
                     </div>
-                    <div class="glass p-6 rounded-[30px] text-center">
-                        <span id="stat-looks" class="text-2xl font-bold">0</span>
-                        <p class="text-[10px] uppercase text-gray-500 mt-1">Образов</p>
+                    <div class="glass p-7 rounded-[30px] text-center">
+                        <span id="stat-looks" class="text-3xl font-bold">0</span>
+                        <p class="text-[11px] uppercase text-gray-500 font-bold mt-2 tracking-widest">Образов</p>
                     </div>
                 </div>
 
-                <button onclick="resetApp()" class="w-full py-4 text-red-500 text-sm font-bold border border-red-500/20 rounded-2xl">Сбросить все данные</button>
+                <button onclick="resetApp()" class="w-full py-5 text-red-500 text-[11px] font-black uppercase tracking-[0.2em] border border-red-500/10 rounded-2xl active:bg-red-500/5 transition">Полный сброс системы</button>
             </section>
 
         </main>
 
         <!-- NAVIGATION -->
         <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm h-20 glass rounded-[40px] flex items-center justify-around px-8 z-50 tab-bar">
-            <button onclick="showPage('home')" class="nav-btn text-gray-400" id="btn-home"><i data-lucide="home"></i></button>
-            <button onclick="showPage('closet')" class="nav-btn text-gray-400" id="btn-closet"><i data-lucide="shirt"></i></button>
-            <button onclick="showPage('editor')" class="nav-btn text-gray-400" id="btn-editor"><i data-lucide="combine"></i></button>
-            <button onclick="showPage('profile')" class="nav-btn text-gray-400" id="btn-profile"><i data-lucide="user"></i></button>
+            <button onclick="showPage('home')" class="nav-btn text-gray-400" id="btn-home"><i data-lucide="home" class="w-6 h-6"></i></button>
+            <button onclick="showPage('closet')" class="nav-btn text-gray-400" id="btn-closet"><i data-lucide="shirt" class="w-6 h-6"></i></button>
+            <button onclick="showPage('editor')" class="nav-btn text-gray-400" id="btn-editor"><i data-lucide="combine" class="w-6 h-6"></i></button>
+            <button onclick="showPage('profile')" class="nav-btn text-gray-400" id="btn-profile"><i data-lucide="user" class="w-6 h-6"></i></button>
         </nav>
     </div>
 
-    <!-- Hidden Inputs -->
+    <!-- Hidden File Input -->
     <input type="file" id="upload-input" class="hidden" accept="image/*" onchange="handleFileUpload(event)">
 
     <script>
         const WEATHER_KEY = 'd73f839eb883d8a9f75cf9433fb4713e';
         let db, canvas;
 
-        // --- ИНИЦИАЛИЗАЦИЯ ---
         window.onload = async () => {
             initDB();
             lucide.createIcons();
@@ -217,7 +219,7 @@
             };
         }
 
-        // --- ПРОФИЛЬ И ДАННЫЕ ---
+        // ПАРАМЕТРЫ ПРОФИЛЯ
         function handleAvatarUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -232,7 +234,6 @@
 
         function displayAvatar(base64) {
             const preview = document.getElementById('avatar-preview');
-            const icon = document.getElementById('camera-icon');
             if (base64) {
                 preview.innerHTML = `<img src="${base64}" class="w-full h-full object-cover">`;
             }
@@ -253,12 +254,15 @@
             displayAvatar(localStorage.getItem('user_avatar'));
         }
 
-        // --- НАВИГАЦИЯ И ИНТЕРФЕЙС ---
+        // НАВИГАЦИЯ
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`view-${pageId}`).classList.add('active');
-            document.getElementById(`btn-${pageId}`).classList.add('active');
+            const target = document.getElementById(`view-${pageId}`);
+            if(target) target.classList.add('active');
+            const btn = document.getElementById(`btn-${pageId}`);
+            if(btn) btn.classList.add('active');
+            window.scrollTo(0, 0);
             if (pageId === 'profile') updateStats();
         }
 
@@ -272,84 +276,113 @@
             document.body.className = localStorage.getItem('theme') || 'dark';
         }
 
-        // --- ФУНКЦИОНАЛ ---
+        // ФУНКЦИОНАЛ ГАРДЕРОБА
         async function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-            Swal.fire({ title: 'Обработка...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            Swal.fire({ 
+                title: 'AI Магия...', 
+                text: 'Удаляем фон с фотографии',
+                allowOutsideClick: false, 
+                didOpen: () => Swal.showLoading() 
+            });
             try {
                 const blob = await imglyRemoveBackground(file);
                 const reader = new FileReader();
                 reader.readAsDataURL(blob);
                 reader.onloadend = () => {
-                    const item = { id: Date.now(), img: reader.result, category: 'all' };
+                    const item = { id: Date.now(), img: reader.result };
                     const tx = db.transaction('items', 'readwrite');
                     tx.objectStore('items').add(item);
-                    tx.oncomplete = () => { renderCloset(); Swal.close(); };
+                    tx.oncomplete = () => { renderCloset(); updateStats(); Swal.close(); };
                 };
-            } catch (err) { Swal.fire('Ошибка', 'Не удалось удалить фон', 'error'); }
+            } catch (err) { Swal.fire('Ошибка', 'Не удалось обработать изображение', 'error'); }
         }
 
         function renderCloset() {
             const tx = db.transaction('items', 'readonly');
             tx.objectStore('items').getAll().onsuccess = (e) => {
                 const items = e.target.result;
-                document.getElementById('closet-grid').innerHTML = items.map(i => `
-                    <div class="glass p-4 rounded-[30px] relative">
+                const grid = document.getElementById('closet-grid');
+                if(!grid) return;
+                grid.innerHTML = items.map(i => `
+                    <div class="glass p-5 rounded-[35px] relative group active:scale-95 transition">
                         <img src="${i.img}" class="w-full aspect-square object-contain">
-                        <button onclick="deleteItem(${i.id})" class="absolute top-2 right-2 text-red-500"><i data-lucide="x-circle"></i></button>
+                        <button onclick="deleteItem(${i.id})" class="absolute top-3 right-3 text-red-500 bg-red-500/10 p-2 rounded-full opacity-0 group-hover:opacity-100 transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 `).join('');
-                document.getElementById('editor-inventory').innerHTML = items.map(i => `
-                    <img src="${i.img}" onclick="addToCanvas('${i.img}')" class="w-16 h-16 glass p-2 rounded-xl flex-shrink-0 cursor-pointer">
+                const inv = document.getElementById('editor-inventory');
+                if(inv) inv.innerHTML = items.map(i => `
+                    <img src="${i.img}" onclick="addToCanvas('${i.img}')" class="w-20 h-20 glass p-3 rounded-2xl flex-shrink-0 cursor-pointer active:scale-90 transition">
                 `).join('');
                 lucide.createIcons();
             };
         }
 
         function deleteItem(id) {
-            db.transaction('items', 'readwrite').objectStore('items').delete(id).onsuccess = renderCloset;
+            db.transaction('items', 'readwrite').objectStore('items').delete(id).onsuccess = () => {
+                renderCloset();
+                updateStats();
+            };
         }
 
         function initCanvas() {
-            const size = Math.min(window.innerWidth - 60, 400);
+            const size = Math.min(window.innerWidth - 80, 450);
             canvas = new fabric.Canvas('outfit-canvas', { width: size, height: size * 1.2 });
         }
 
         function addToCanvas(url) {
             fabric.Image.fromURL(url, (img) => {
-                img.scaleToWidth(150);
+                img.scaleToWidth(180);
+                img.set({ cornerStyle: 'circle', cornerColor: '#fff', borderColor: '#fff' });
                 canvas.add(img);
+                canvas.setActiveObject(img);
             });
         }
 
         function saveOutfit() {
             const data = canvas.toDataURL();
             db.transaction('outfits', 'readwrite').objectStore('outfits').add({ id: Date.now(), img: data });
-            Swal.fire('Успех', 'Образ сохранен в профиль', 'success');
+            Swal.fire({ icon: 'success', title: 'Образ сохранен!', showConfirmButton: false, timer: 1500 });
+            updateStats();
         }
 
         function updateStats() {
+            if(!db) return;
             db.transaction('items').objectStore('items').count().onsuccess = (e) => document.getElementById('stat-items').innerText = e.target.result;
             db.transaction('outfits').objectStore('outfits').count().onsuccess = (e) => document.getElementById('stat-looks').innerText = e.target.result;
         }
 
         function initWeather() {
             navigator.geolocation.getCurrentPosition(async (pos) => {
-                const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
-                const data = await res.json();
-                document.getElementById('weather-city').innerText = data.name;
-                document.getElementById('weather-temp').innerText = Math.round(data.main.temp) + '°';
-                document.getElementById('weather-desc').innerText = data.weather[0].description;
+                try {
+                    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
+                    const data = await res.json();
+                    document.getElementById('weather-city').innerText = data.name;
+                    document.getElementById('weather-temp').innerText = Math.round(data.main.temp) + '°';
+                    document.getElementById('weather-desc').innerText = data.weather[0].description;
+                    document.getElementById('weather-hum').innerText = data.main.humidity;
+                } catch(e) {}
             });
         }
 
         function resetApp() {
-            if(confirm('Удалить всё?')) {
-                localStorage.clear();
-                indexedDB.deleteDatabase('WardrobeDB');
-                location.reload();
-            }
+            Swal.fire({
+                title: 'Сбросить всё?',
+                text: "Весь гардероб и настройки профиля будут удалены.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Удалить всё'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.clear();
+                    indexedDB.deleteDatabase('WardrobeDB');
+                    location.reload();
+                }
+            });
         }
         
         function triggerUpload() { document.getElementById('upload-input').click(); }
