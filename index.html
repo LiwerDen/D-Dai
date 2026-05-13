@@ -19,8 +19,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
         
-        :root { --bg: #ffffff; --text: #000000; --card: #f4f4f4;}
-        .dark { --bg: #000000; --text: #ffffff; --card: #111111; }
+        :root { --bg: #ffffff; --text: #000000;}
+        .dark { --bg: #000000; --text: #ffffff; }
 
         body {
             background-color: var(--bg);
@@ -29,11 +29,9 @@
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
 
-        /* Цветовые схемы текста */
         body.dark { color: #ffffff; }
         body:not(.dark) { color: #000000; }
-        body.dark .text-adaptive { color: #ffffff; }
-        body:not(.dark) .text-adaptive { color: #000000; }
+        .text-adaptive { color: inherit; }
 
         .glass {
             background: rgba(120, 120, 120, 0.05);
@@ -62,6 +60,8 @@
             background: #1a1a1a !important; border: 1px solid #333 !important; 
             border-radius: 15px !important; color: white !important; font-family: inherit; margin-bottom: 10px !important;
         }
+
+        .hourly-item { min-width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
     </style>
 </head>
 <body class="dark">
@@ -81,7 +81,7 @@
             <!-- HOME PAGE -->
             <section id="view-home" class="page active">
                 <div class="glass rounded-[40px] p-8 mb-8">
-                    <div class="flex justify-between items-start">
+                    <div class="flex justify-between items-start mb-6">
                         <div>
                             <p id="weather-city" class="text-[11px] uppercase tracking-[0.2em] text-gray-500">Загрузка...</p>
                             <h2 id="weather-temp" class="text-6xl font-light tracking-tighter mt-1 text-adaptive">--°</h2>
@@ -91,6 +91,10 @@
                             <p id="weather-hum" class="text-[10px] uppercase text-gray-500">Влажность: --%</p>
                             <p id="weather-day" class="text-[10px] uppercase text-gray-500 mt-1">Сегодня: -- / --</p>
                         </div>
+                    </div>
+                    <!-- Hourly Forecast -->
+                    <div id="weather-hourly" class="flex gap-4 overflow-x-auto no-scrollbar border-t border-white/10 pt-4 mt-2">
+                        <!-- Почасовая погода попадет сюда -->
                     </div>
                 </div>
 
@@ -115,7 +119,10 @@
 
             <!-- CLOSET PAGE -->
             <section id="view-closet" class="page">
-                <h2 class="text-4xl font-bold mb-8 tracking-tight text-adaptive">Вещи</h2>
+                <h2 class="text-4xl font-bold mb-6 tracking-tight text-adaptive">Вещи</h2>
+                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6" id="closet-filters">
+                    <!-- Категории фильтрации -->
+                </div>
                 <div id="closet-grid" class="grid grid-cols-2 gap-5"></div>
             </section>
 
@@ -129,10 +136,7 @@
                 </div>
                 <div class="flex justify-center mb-6"><canvas id="outfit-canvas"></canvas></div>
                 <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4" id="editor-filters">
-                    <button onclick="filterEditorInventory('Все')" class="cat-btn bg-indigo-500/20 px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap active text-adaptive">Все</button>
-                    <button onclick="filterEditorInventory('Верх')" class="cat-btn glass px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap text-adaptive">Верх</button>
-                    <button onclick="filterEditorInventory('Низ')" class="cat-btn glass px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap text-adaptive">Низ</button>
-                    <button onclick="filterEditorInventory('Обувь')" class="cat-btn glass px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap text-adaptive">Обувь</button>
+                    <!-- Категории конструктора -->
                 </div>
                 <div id="editor-inventory" class="flex gap-4 overflow-x-auto no-scrollbar glass p-6 rounded-[35px] min-h-[120px]"></div>
                 <div class="grid grid-cols-2 gap-4 mt-6">
@@ -175,7 +179,14 @@
     <script>
         const GEMINI_KEY = 'AIzaSyDFJ9AkIpDm7A2I8UAYK5lsjJWXVKaAGqI'; 
         const WEATHER_KEY = 'd73f839eb883d8a9f75cf9433fb4713e';
-        let db, canvas, allItems = [];
+        
+        const CATEGORIES = [
+            "Футболки", "Топы", "Кофты", "Куртки", 
+            "Брюки", "Штаны", "Юбки", "Шорты", 
+            "Обувь", "Шапки", "Аксессуары"
+        ];
+
+        let db, canvas, allItems = [], currentClosetCat = "Все", currentEditorCat = "Все";
 
         window.onload = async () => {
             initDB();
@@ -184,6 +195,7 @@
             initAIService();
             loadUserData();
             initTheme();
+            renderCategoryFilters();
             showPage('home');
             lucide.createIcons();
         };
@@ -205,7 +217,7 @@
             db.transaction('items', 'readonly').objectStore('items').getAll().onsuccess = (e) => {
                 allItems = e.target.result;
                 renderCloset();
-                filterEditorInventory('Все');
+                filterEditorInventory(currentEditorCat);
             };
             renderSavedOutfits();
         }
@@ -217,6 +229,19 @@
             });
         }
 
+        function renderCategoryFilters() {
+            const createBtn = (cat, active, onClick) => `
+                <button onclick="${onClick}('${cat}')" class="cat-btn ${active ? 'bg-indigo-500/20 active' : 'glass'} px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap text-adaptive">
+                    ${cat}
+                </button>`;
+
+            const html = ['Все', ...CATEGORIES].map(cat => createBtn(cat, cat === "Все", "filterCloset")).join('');
+            const htmlEditor = ['Все', ...CATEGORIES].map(cat => createBtn(cat, cat === "Все", "filterEditorInventory")).join('');
+            
+            document.getElementById('closet-filters').innerHTML = html;
+            document.getElementById('editor-filters').innerHTML = htmlEditor;
+        }
+
         async function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -225,13 +250,10 @@
                 background: '#111', color: '#fff',
                 customClass: { popup: 'custom-swal-popup' },
                 html: `
-                    <input id="swal-name" class="custom-swal-input w-full p-4" placeholder="Название (например, Oversize Tee)">
-                    <input id="swal-brand" class="custom-swal-input w-full p-4" placeholder="Бренд (например, Zara)">
+                    <input id="swal-name" class="custom-swal-input w-full p-4" placeholder="Название">
+                    <input id="swal-brand" class="custom-swal-input w-full p-4" placeholder="Бренд">
                     <select id="swal-cat" class="custom-swal-input w-full p-4">
-                        <option value="Верх">Верхняя одежда</option>
-                        <option value="Низ">Брюки / Юбки</option>
-                        <option value="Обувь">Обувь</option>
-                        <option value="Аксессуары">Аксессуары</option>
+                        ${CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>`,
                 preConfirm: () => ({ 
                     name: document.getElementById('swal-name').value, 
@@ -248,8 +270,15 @@
             };
         }
 
+        function filterCloset(cat) {
+            currentClosetCat = cat;
+            renderCloset();
+            updateFilterUI('closet-filters', cat);
+        }
+
         function renderCloset() {
-            document.getElementById('closet-grid').innerHTML = allItems.map(i => `
+            const filtered = currentClosetCat === "Все" ? allItems : allItems.filter(i => i.category === currentClosetCat);
+            document.getElementById('closet-grid').innerHTML = filtered.map(i => `
                 <div class="glass p-4 rounded-[30px] relative group">
                     <img src="${i.img}" class="w-full aspect-square object-contain mb-2 rounded-xl">
                     <p class="text-[9px] font-bold uppercase text-indigo-400">${i.category} ${i.brand ? '• ' + i.brand : ''}</p>
@@ -260,11 +289,26 @@
         }
 
         function filterEditorInventory(cat) {
+            currentEditorCat = cat;
             const filtered = cat === 'Все' ? allItems : allItems.filter(i => i.category === cat);
             document.getElementById('editor-inventory').innerHTML = filtered.map(i => `
                 <div onclick="addToCanvas('${i.img}')" class="flex-shrink-0 cursor-pointer active:scale-90 transition">
                     <img src="${i.img}" class="w-20 h-20 glass p-2 rounded-2xl object-contain">
                 </div>`).join('');
+            updateFilterUI('editor-filters', cat);
+        }
+
+        function updateFilterUI(parentId, activeCat) {
+            const btns = document.getElementById(parentId).querySelectorAll('button');
+            btns.forEach(b => {
+                if(b.innerText === activeCat.toUpperCase()) {
+                    b.classList.add('bg-indigo-500/20', 'active');
+                    b.classList.remove('glass');
+                } else {
+                    b.classList.remove('bg-indigo-500/20', 'active');
+                    b.classList.add('glass');
+                }
+            });
         }
 
         function addToCanvas(url) {
@@ -277,17 +321,17 @@
         }
 
         async function geminiGenerateOutfit() {
-            if (allItems.length < 2) return Swal.fire('Добавьте минимум 2 вещи в гардероб');
+            if (allItems.length < 2) return Swal.fire('Мало вещей для образа!');
             
             Swal.fire({ 
-                title: 'AI стилист думает...', 
+                title: 'AI собирает образ...', 
                 background: '#111', color: '#fff', 
                 didOpen: () => Swal.showLoading(),
                 customClass: { popup: 'custom-swal-popup' }
             });
 
-            const itemsStr = allItems.map(i => `ID:${i.id} (${i.name}, тип:${i.category})`).join(', ');
-            const prompt = `Ты модный стилист. Из списка вещей выбери идеальный образ (2-3 вещи). Список: ${itemsStr}. Верни ТОЛЬКО ID через запятую, без лишних слов. Пример: 12345, 67890`;
+            const itemsStr = allItems.map(i => `ID:${i.id} (категория:${i.category}, имя:${i.name})`).join(', ');
+            const prompt = `Ты стилист. Выбери из списка 3 гармонирующих вещи (например верх, низ и обувь). Список: ${itemsStr}. Верни ТОЛЬКО ID через запятую.`;
 
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
@@ -296,52 +340,62 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
                 const data = await res.json();
-                const textResult = data.candidates[0].content.parts[0].text;
-                const ids = textResult.split(',').map(id => parseInt(id.trim())).filter(n => !isNaN(n));
+                const ids = data.candidates[0].content.parts[0].text.split(',').map(id => parseInt(id.trim())).filter(n => !isNaN(n));
                 
                 canvas.clear();
-                let count = 0;
-                for(let id of ids) {
+                ids.forEach((id, idx) => {
                     const item = allItems.find(i => i.id === id);
                     if (item) {
                         fabric.Image.fromURL(item.img, (img) => {
-                            img.scaleToWidth(160);
-                            img.set({ top: 40 * count, left: 30 * count });
+                            img.scaleToWidth(150);
+                            img.set({ top: 50 * idx, left: 30 * idx });
                             canvas.add(img);
                             canvas.renderAll();
                         });
-                        count++;
                     }
-                }
+                });
                 Swal.close();
-            } catch (e) { 
-                console.error(e);
-                Swal.fire('Ошибка ИИ. Попробуйте еще раз.'); 
-            }
+            } catch (e) { Swal.fire('Ошибка ИИ'); }
         }
 
         function initAIService() {
-            const tips = [
-                "Сегодня отличный день для многослойности.",
-                "Добавь яркий аксессуар к базовому образу.",
-                "Минимализм всегда в моде, попробуй монохром.",
-                "Твой стиль — твои правила. Не бойся экспериментов!",
-                "Погода шепчет: выбери что-то уютное и оверсайз."
-            ];
+            const tips = ["Многослойность — тренд сезона", "Добавь аксессуар для акцента", "Минимализм всегда актуален"];
             document.getElementById('ai-daily-advice').innerText = tips[Math.floor(Math.random() * tips.length)];
         }
 
-        function initWeather() {
+        async function initWeather() {
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 try {
-                    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
-                    const data = await res.json();
-                    document.getElementById('weather-city').innerText = data.name;
-                    document.getElementById('weather-temp').innerText = Math.round(data.main.temp) + '°';
-                    document.getElementById('weather-desc').innerText = data.weather[0].description;
-                    document.getElementById('weather-hum').innerText = `Влажность: ${data.main.humidity}%`;
-                    document.getElementById('weather-day').innerText = `Сегодня: ${Math.round(data.main.temp_max)}° / ${Math.round(data.main.temp_min)}°`;
-                } catch(e) {}
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    
+                    // Current Weather
+                    const curRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
+                    const curData = await curRes.json();
+                    
+                    document.getElementById('weather-city').innerText = curData.name;
+                    document.getElementById('weather-temp').innerText = Math.round(curData.main.temp) + '°';
+                    document.getElementById('weather-desc').innerText = curData.weather[0].description;
+                    document.getElementById('weather-hum').innerText = `Влажность: ${curData.main.humidity}%`;
+                    document.getElementById('weather-day').innerText = `Сегодня: ${Math.round(curData.main.temp_max)}° / ${Math.round(curData.main.temp_min)}°`;
+
+                    // Hourly Forecast
+                    const hourRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
+                    const hourData = await hourRes.json();
+                    
+                    const hourlyHtml = hourData.list.slice(0, 8).map(h => {
+                        const time = new Date(h.dt * 1000).getHours() + ":00";
+                        const icon = `https://openweathermap.org/img/wn/${h.weather[0].icon}.png`;
+                        return `
+                            <div class="hourly-item">
+                                <span class="text-[9px] text-gray-400 uppercase">${time}</span>
+                                <img src="${icon}" class="w-8 h-8">
+                                <span class="text-xs font-bold text-adaptive">${Math.round(h.main.temp)}°</span>
+                            </div>`;
+                    }).join('');
+                    document.getElementById('weather-hourly').innerHTML = hourlyHtml;
+
+                } catch(e) { console.error("Weather error", e); }
             });
         }
 
@@ -364,8 +418,8 @@
         }
 
         function loadUserData() {
-            document.getElementById('user-name').value = localStorage.getItem('user_name') || 'Ваше имя?';
-            document.getElementById('user-bio').value = localStorage.getItem('user_bio') || 'Расскажите о себе';
+            document.getElementById('user-name').value = localStorage.getItem('user_name') || 'Ваш Стиль';
+            document.getElementById('user-bio').value = localStorage.getItem('user_bio') || 'Опишите свой вкус';
             if (localStorage.getItem('user_avatar')) document.getElementById('profile-avatar').src = localStorage.getItem('user_avatar');
         }
 
@@ -401,7 +455,7 @@
         function triggerUpload() { document.getElementById('upload-input').click(); }
 
         function resetOutfitsOnly() {
-            if(confirm('Удалить только сохраненные образы? Вещи в гардеробе останутся.')) {
+            if(confirm('Удалить сохраненные образы?')) {
                 const tx = db.transaction('outfits', 'readwrite');
                 tx.objectStore('outfits').clear();
                 tx.oncomplete = () => refreshData();
@@ -409,4 +463,5 @@
         }
     </script>
 </body>
+</html>
 </html>
