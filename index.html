@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI Wardrobe</title>
+    <title>AI Wardrobe Pro</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -95,7 +95,6 @@
             overflow: hidden; position: relative; background: #111;
             box-shadow: 0 0 0 1000px rgba(0,0,0,0.6);
         }
-        #crop-canvas-internal { cursor: move; }
     </style>
 </head>
 <body class="dark">
@@ -111,12 +110,12 @@
                 <input type="range" id="avatar-zoom-slider" min="0.1" max="3" step="0.01" class="w-44 accent-indigo-500">
             </div>
             <div class="flex gap-4">
-                <button onclick="closeAvatarEditor()" class="flex-1 py-4 glass rounded-2xl text-white font-bold uppercase text-[10px] tracking-widest">Отмена</button>
-                <button onclick="applyAvatarCrop()" class="flex-1 py-4 bg-indigo-500 rounded-2xl text-white font-bold uppercase text-[10px] tracking-widest">Сохранить</button>
+                <button onclick="closeAvatarEditor()" class="flex-1 py-4 glass rounded-2xl text-white font-bold uppercase text-[10px] tracking-widest active:scale-95 transition">Отмена</button>
+                <button onclick="applyAvatarCrop()" class="flex-1 py-4 bg-indigo-500 rounded-2xl text-white font-bold uppercase text-[10px] tracking-widest active:scale-95 transition shadow-lg">Сохранить</button>
             </div>
         </div>
         <div class="mt-4 flex gap-4 text-white text-xs opacity-50">
-            <span>Колесико / Слайдер - Zoom</span> • <span>Перетаскивание - Позиция</span>
+            <span>Щипок / Слайдер - Масштаб</span> • <span>Касание - Позиция</span>
         </div>
     </div>
 
@@ -231,8 +230,15 @@
         const CATEGORIES = ["Футболки", "Топы", "Кофты", "Куртки", "Брюки", "Штаны", "Юбки", "Шорты", "Обувь", "Шапки", "Аксессуары"];
         let db, canvas, cropCanvas, allItems = [], currentClosetCat = "Все", currentEditorCat = "Все", isAILoading = false;
         let cropImgInstance = null;
-        let isDraggingCrop = false;
-        let lastPosX, lastPosY;
+        let lastUploadTrigger = 0;
+
+        // Инициализация глобальных настроек Fabric (Улучшение мобильного Drag&Drop)
+        fabric.Object.prototype.cornerSize = 24;
+        fabric.Object.prototype.touchCornerSize = 24;
+        fabric.Object.prototype.transparentCorners = false;
+        fabric.Object.prototype.cornerColor = '#6366f1';
+        fabric.Object.prototype.cornerStyle = 'circle';
+        fabric.Object.prototype.borderColor = '#6366f1';
 
         window.onload = async () => {
             initDB();
@@ -270,28 +276,52 @@
             const size = Math.min(window.innerWidth - 64, 420);
             canvas = new fabric.Canvas('outfit-canvas', { 
                 width: size, height: size * 1.6, backgroundColor: '#151515',
-                preserveObjectStacking: true
+                preserveObjectStacking: true,
+                allowTouchScrolling: true
             });
             
-            // Надежный перехват клика по области аватара для открытия редактора
-            canvas.on('mouse:down', (opt) => {
-                if(!opt.e) return;
-                const pointer = canvas.getPointer(opt.e);
-                const center = canvas.width / 2;
-                const avatarRadius = 50; // Точный радиус как в renderMannequin
-                const headCenterY = 40 + avatarRadius; // Смещение как в renderMannequin
-                
-                const dx = pointer.x - center;
-                const dy = pointer.y - headCenterY;
-                if (Math.sqrt(dx * dx + dy * dy) <= avatarRadius) {
-                    triggerAvatarUpload();
+            // Надежный перехват клика по области аватара для открытия редактора на мобилках (Safari fix)
+            const handleHeadInteraction = (e) => {
+                let clientX, clientY;
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else if (e.changedTouches && e.changedTouches.length > 0) {
+                    clientX = e.changedTouches[0].clientX;
+                    clientY = e.changedTouches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
                 }
-            });
+
+                if (!clientX || !clientY) return;
+
+                const rect = canvas.upperCanvasEl.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+
+                const center = canvas.width / 2;
+                const avatarRadius = 50; 
+                const headCenterY = 40 + avatarRadius; 
+                
+                const dx = x - center;
+                const dy = y - headCenterY;
+
+                if (Math.sqrt(dx * dx + dy * dy) <= avatarRadius) {
+                    const now = Date.now();
+                    if (now - lastUploadTrigger > 500) {
+                        lastUploadTrigger = now;
+                        triggerAvatarUpload();
+                    }
+                }
+            };
+
+            canvas.upperCanvasEl.addEventListener('click', handleHeadInteraction);
+            canvas.upperCanvasEl.addEventListener('touchend', handleHeadInteraction);
             
             renderMannequin();
         }
 
-        // 1 & 2. ПРЕМИАЛЬНЫЙ МАНЕКЕН И ПРОПОРЦИИ ТЕЛА (БЕЗ РУК)
         function renderMannequin() {
             const itemsToKeep = canvas.getObjects().filter(obj => !obj.isMannequinComponent);
             canvas.clear();
@@ -300,7 +330,6 @@
             const center = canvas.width / 2;
             const bodyColor = '#242424';
             
-            // Идеальные fashion пропорции головы 
             const avatarRadius = 50; 
             const headTop = 40;
 
@@ -309,13 +338,11 @@
                 originX: 'center', originY: 'center', isMannequinComponent: true, selectable: false, hoverCursor: 'pointer'
             });
 
-            // Элегантная шея
             const neck = new fabric.Rect({
                 width: 20, height: 25, fill: '#1c1c1c', left: center, top: headTop + (avatarRadius * 2) - 5,
                 originX: 'center', isMannequinComponent: true, selectable: false, hoverCursor: 'default'
             });
 
-            // Утонченное туловище (Slimmer fashion torso)
             const torsoWidth = 90;
             const torsoHeight = 180;
             const torsoTop = headTop + (avatarRadius * 2) + 15;
@@ -325,7 +352,6 @@
                 originX: 'center', rx: 16, ry: 16, isMannequinComponent: true, selectable: false, hoverCursor: 'default'
             });
 
-            // Более естественные, широкие разделенные ноги
             const legWidth = 38;
             const legHeight = 220;
             const legTop = torsoTop + torsoHeight - 15;
@@ -343,7 +369,6 @@
 
             canvas.add(neck, torso, leftLeg, rightLeg, headCircle);
 
-            // Наложение отцентрированного аватара
             const avatarSrc = localStorage.getItem('user_avatar') || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
             
             fabric.Image.fromURL(avatarSrc, (img) => {
@@ -352,7 +377,6 @@
                     selectable: false, isMannequinComponent: true, hoverCursor: 'pointer'
                 });
                 
-                // Идеально масштабируем и обрезаем под круг
                 const scale = (avatarRadius * 2) / Math.min(img.width, img.height);
                 img.scale(scale);
                 img.set({
@@ -363,19 +387,17 @@
                 
                 canvas.add(img);
                 
-                // Возвращаем существующую одежду
                 itemsToKeep.forEach(obj => canvas.add(obj));
                 sortCanvasLayers();
             }, { crossOrigin: 'anonymous' });
         }
 
-        // 3. ПОЗИЦИОНИРОВАНИЕ ОДЕЖДЫ (СЛОИ ОВЕРЛЕЕВ И ГРУППИРОВКА)
         function setupClothingImage(img, category) {
             let scale = 1.0;
             const center = canvas.width / 2;
 
             if (["Футболки", "Топы", "Кофты", "Куртки"].includes(category)) {
-                scale = 130 / img.width; // Масштаб под новый узкий торс
+                scale = 130 / img.width; 
                 img.scale(scale);
                 img.set({ left: center, top: 155, originX: 'center' }); 
             } else if (["Брюки", "Штаны", "Юбки", "Шорты"].includes(category)) {
@@ -397,29 +419,23 @@
             }
 
             img.set({
-                clothingCategory: category, hasControls: true, hasBorders: true, transparentCorners: false, cornerColor: '#6366f1', cornerSize: 8
+                clothingCategory: category, hasControls: true, hasBorders: true, 
+                transparentCorners: false, cornerColor: '#6366f1', cornerSize: 24, touchCornerSize: 24,
+                borderColor: '#6366f1', cornerStyle: 'circle'
             });
         }
 
+        // Надежная атомарная сортировка слоев
         function sortCanvasLayers() {
             const order = ["Обувь", "Штаны", "Брюки", "Шорты", "Юбки", "Футболки", "Топы", "Кофты", "Куртки", "Аксессуары", "Шапки"];
-            const allObjs = canvas.getObjects();
-            
-            allObjs.forEach(obj => {
-                if (obj.isMannequinComponent) {
-                    obj.layerWeight = -1;
-                } else {
-                    const idx = order.indexOf(obj.clothingCategory);
-                    obj.layerWeight = idx !== -1 ? idx : 99;
-                }
+            canvas._objects.sort((a, b) => {
+                const weightA = a.isMannequinComponent ? -1 : (order.indexOf(a.clothingCategory) !== -1 ? order.indexOf(a.clothingCategory) : 99);
+                const weightB = b.isMannequinComponent ? -1 : (order.indexOf(b.clothingCategory) !== -1 ? order.indexOf(b.clothingCategory) : 99);
+                return weightA - weightB;
             });
-            
-            allObjs.sort((a, b) => a.layerWeight - b.layerWeight);
-            allObjs.forEach((obj, idx) => { canvas.moveTo(obj, idx); });
             canvas.renderAll();
         }
 
-        // Асинхронное добавление на Canvas с возвратом Promise (необходимо для AI)
         function addToCanvasAsync(imgUrl, category) {
             return new Promise((resolve) => {
                 fabric.Image.fromURL(imgUrl, (img) => {
@@ -436,10 +452,9 @@
         }
 
         function addToCanvas(imgUrl, category) {
-            addToCanvasAsync(imgUrl, category); // Стандартный синхронный вызов из интерфейса
+            addToCanvasAsync(imgUrl, category); 
         }
 
-        // 4 & 5. AI STYLIST: НАДЕЖНАЯ АСИНХРОННАЯ ГЕНЕРАЦИЯ БЕЗ ЗАВИСАНИЙ
         async function geminiGenerateOutfit(retryCount = 0) {
             if (isAILoading) return;
             const cleanItems = allItems.filter(i => !i.isDirty);
@@ -492,7 +507,6 @@
                 const result = JSON.parse(text);
                 if (!result.ids || !Array.isArray(result.ids) || result.ids.length === 0) throw new Error("Empty outfit");
                 
-                // РЕАЛЬНОЕ НАЛОЖЕНИЕ ВЕЩЕЙ И ДОЖИДАНИЕ ИХ ОТРИСОВКИ
                 renderMannequin();
                 const promises = result.ids.map(id => {
                     const item = cleanItems.find(i => i.id == id);
@@ -513,13 +527,11 @@
                     background: '#111', color: '#fff', customClass: { popup: 'custom-swal-popup' }
                 });
             } catch (e) {
-                // Плавный фолбек - если апи сломалось (перегрузка), пробуем еще раз незаметно для пользователя
                 if (retryCount < 2) {
                     isAILoading = false;
                     return geminiGenerateOutfit(retryCount + 1);
                 }
                 
-                // Если попытки исчерпаны — рендерим вручную
                 renderMannequin();
                 const randomTops = cleanItems.filter(i => ["Футболки", "Топы", "Кофты", "Куртки"].includes(i.category));
                 const randomBottoms = cleanItems.filter(i => ["Брюки", "Штаны", "Юбки", "Шорты"].includes(i.category));
@@ -537,44 +549,44 @@
             } finally { isAILoading = false; }
         }
 
-        // АВАТАР РЕДАКТОР С DRAG, ZOOM И ИДЕАЛЬНОЙ ЦЕНТРОВКОЙ
+        // АВАТАР РЕДАКТОР С НАСТОЯЩИМ TOUCH DRAG И PINCH ZOOM
         function initAvatarCropCanvas() {
             cropCanvas = new fabric.Canvas('crop-canvas-internal', { 
                 width: 280, height: 280, backgroundColor: '#111', selection: false 
             });
 
-            // Реализация Drag (перетаскивание)
-            cropCanvas.on('mouse:down', (options) => {
-                if (cropImgInstance) {
-                    isDraggingCrop = true;
-                    const pointer = cropCanvas.getPointer(options.e);
-                    lastPosX = pointer.x;
-                    lastPosY = pointer.y;
+            // Mobile Pinch Zoom
+            let initialDistance = 0;
+            let initialScale = 1;
+            
+            cropCanvas.upperCanvasEl.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2 && cropImgInstance) {
+                    e.preventDefault();
+                    initialDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    initialScale = cropImgInstance.scaleX;
                 }
-            });
+            }, {passive: false});
 
-            cropCanvas.on('mouse:move', (options) => {
-                if (isDraggingCrop && cropImgInstance) {
-                    const pointer = cropCanvas.getPointer(options.e);
-                    cropImgInstance.left += (pointer.x - lastPosX);
-                    cropImgInstance.top += (pointer.y - lastPosY);
-                    lastPosX = pointer.x;
-                    lastPosY = pointer.y;
+            cropCanvas.upperCanvasEl.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && cropImgInstance) {
+                    e.preventDefault();
+                    const distance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    let zoom = initialScale * (distance / initialDistance);
+                    if (zoom > 4) zoom = 4;
+                    if (zoom < 0.1) zoom = 0.1;
+                    cropImgInstance.set({ scaleX: zoom, scaleY: zoom });
+                    document.getElementById('avatar-zoom-slider').value = zoom;
                     cropCanvas.renderAll();
                 }
-            });
+            }, {passive: false});
 
-            cropCanvas.on('mouse:up', () => { isDraggingCrop = false; });
-
-            // Поддержка зума ползунком
-            document.getElementById('avatar-zoom-slider').oninput = function(e) {
-                if (!cropImgInstance) return;
-                const val = parseFloat(e.target.value);
-                cropImgInstance.set({ scaleX: val, scaleY: val });
-                cropCanvas.renderAll();
-            };
-
-            // Поддержка зума колесиком/тачпадом
+            // Desktop Mouse Wheel Zoom
             cropCanvas.on('mouse:wheel', function(opt) {
                 if (!cropImgInstance) return;
                 var delta = opt.e.deltaY;
@@ -588,6 +600,14 @@
                 opt.e.preventDefault();
                 opt.e.stopPropagation();
             });
+
+            // Slider Zoom
+            document.getElementById('avatar-zoom-slider').oninput = function(e) {
+                if (!cropImgInstance) return;
+                const val = parseFloat(e.target.value);
+                cropImgInstance.set({ scaleX: val, scaleY: val });
+                cropCanvas.renderAll();
+            };
         }
 
         function triggerAvatarUpload() { document.getElementById('avatar-input').click(); }
@@ -603,7 +623,7 @@
                     const scale = Math.max(280 / img.width, 280 / img.height);
                     img.set({ 
                         scaleX: scale, scaleY: scale, left: 140, top: 140, originX: 'center', originY: 'center',
-                        hasControls: false, hasBorders: false, lockScalingFlip: true, hoverCursor: 'move'
+                        hasControls: false, hasBorders: false, lockRotation: true, selectable: true, evented: true, hoverCursor: 'move', moveCursor: 'move'
                     });
                     cropImgInstance = img;
                     cropCanvas.add(img);
@@ -621,7 +641,6 @@
         function closeAvatarEditor() { document.getElementById('avatar-editor-overlay').style.display = 'none'; }
 
         function applyAvatarCrop() {
-            // Кроп канваса 280x280 сохраняется, а идеальная маска применяется при отрисовке манекена
             const dataUrl = cropCanvas.toDataURL({ format: 'png', quality: 1.0 });
             localStorage.setItem('user_avatar', dataUrl);
             document.getElementById('profile-avatar').src = dataUrl;
@@ -629,7 +648,6 @@
             closeAvatarEditor();
         }
 
-        // --- ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ И СИСТЕМЫ СОХРАНЕНЫ В НЕИЗМЕННОМ ВИДЕ ---
         function renderCategoryFilters() {
             const createBtn = (cat, active, onClick) => `<button onclick="${onClick}('${cat}')" class="cat-btn ${active ? 'bg-indigo-500/20 active' : 'glass'} px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap text-adaptive">${cat}</button>`;
             document.getElementById('closet-filters').innerHTML = ['Все', ...CATEGORIES].map(c => createBtn(c, c === "Все", "filterCloset")).join('');
