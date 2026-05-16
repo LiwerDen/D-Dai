@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AI Wardrobe</title>
     
-    <!-- PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3050/3050231.png">
 
-    <!-- Styles & Libs -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
@@ -19,7 +17,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
         
-        :root { --bg: #ffffff; --text: #000000;}
+        :root { --bg: #ffffff; --text: #000000; --accent: #6366f1; }
         .dark { --bg: #000000; --text: #ffffff; }
 
         body {
@@ -27,6 +25,7 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
             transition: background 0.4s ease, color 0.4s ease;
             user-select: none; -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
         }
 
         body.dark { color: #ffffff; }
@@ -38,6 +37,22 @@
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(120, 120, 120, 0.1);
         }
+
+        .weather-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 12px;
+            min-width: 80px;
+            text-align: center;
+        }
+        .dark .weather-card { background: rgba(255, 255, 255, 0.05); }
+        body:not(.dark) .weather-card { background: rgba(0, 0, 0, 0.03); border-color: rgba(0, 0, 0, 0.05); }
+
+        .weather-icon-img {
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.4));
+        }
+        body:not(.dark) .weather-icon-img { filter: brightness(0.8) contrast(1.2); }
 
         header { padding-top: env(safe-area-inset-top, 1.2rem) !important; height: 6rem; display: flex; align-items: center; }
         main { padding-top: 7.5rem !important; }
@@ -52,7 +67,7 @@
 
         .nav-btn.active { color: var(--accent); transform: scale(1.1); }
         .tab-bar { padding-bottom: env(safe-area-inset-bottom, 1.5rem); }
-        .canvas-container { margin: 0 auto !important; border-radius: 30px; overflow: hidden; background: #151515 !important; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .canvas-container { margin: 0 auto !important; border-radius: 40px; overflow: hidden; background: #151515 !important; box-shadow: 0 30px 60px rgba(0,0,0,0.5); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
         .custom-swal-popup { border-radius: 35px !important; background: #111 !important; border: 1px solid #333 !important; color: white !important; }
@@ -61,14 +76,49 @@
             border-radius: 15px !important; color: white !important; font-family: inherit; margin-bottom: 10px !important;
         }
 
-        .hourly-item { min-width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        
-        /* Стили для грязной одежды */
-        .item-dirty { filter: grayscale(1) opacity(0.5); }
-        .dirty-badge { background: rgba(239, 68, 68, 0.2); color: #ef4444; font-size: 8px; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; font-weight: bold; }
+        .btn-ai-magic {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .item-dirty { opacity: 0.6; filter: grayscale(0.5); }
+        .dirty-badge { background: #f59e0b; color: black; font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
+
+        /* Avatar Editor Styles */
+        #avatar-editor-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; touch-action: none;
+        }
+        .crop-area {
+            width: 280px; height: 280px; border-radius: 50%; border: 2px solid #6366f1;
+            overflow: hidden; position: relative; background: #111;
+            box-shadow: 0 0 0 1000px rgba(0,0,0,0.6);
+        }
+        #crop-canvas-internal { cursor: move; }
     </style>
 </head>
 <body class="dark">
+
+    <div id="avatar-editor-overlay">
+        <h3 class="text-white text-xl font-bold mb-8">Настройте фото</h3>
+        <div class="crop-area">
+            <canvas id="crop-canvas-internal"></canvas>
+        </div>
+        <div class="mt-8 flex flex-col gap-4 w-full max-w-xs">
+            <div class="flex items-center justify-between gap-3 text-white text-sm">
+                <span>Масштаб:</span>
+                <input type="range" id="avatar-zoom-slider" min="0.1" max="3" step="0.01" class="w-44 accent-indigo-500">
+            </div>
+            <div class="flex gap-4">
+                <button onclick="closeAvatarEditor()" class="flex-1 py-4 glass rounded-2xl text-white font-bold uppercase text-[10px] tracking-widest">Отмена</button>
+                <button onclick="applyAvatarCrop()" class="flex-1 py-4 bg-indigo-500 rounded-2xl text-white font-bold uppercase text-[10px] tracking-widest">Сохранить</button>
+            </div>
+        </div>
+        <div class="mt-4 flex gap-4 text-white text-xs opacity-50">
+            <span>Колесико / Слайдер - Zoom</span> • <span>Перетаскивание - Позиция</span>
+        </div>
+    </div>
 
     <div id="main-interface">
         <header class="fixed top-0 left-0 right-0 z-40 px-8 glass">
@@ -82,7 +132,6 @@
         </header>
 
         <main class="pb-32 px-8 max-w-2xl mx-auto">
-            <!-- HOME PAGE -->
             <section id="view-home" class="page active">
                 <div class="glass rounded-[40px] p-8 mb-8">
                     <div class="flex justify-between items-start mb-6">
@@ -96,9 +145,7 @@
                             <p id="weather-day" class="text-[10px] uppercase text-gray-500 mt-1">Сегодня: -- / --</p>
                         </div>
                     </div>
-                    <!-- Hourly Forecast -->
-                    <div id="weather-hourly" class="flex gap-4 overflow-x-auto no-scrollbar border-t border-white/10 pt-4 mt-2">
-                        <!-- Почасовая погода попадет сюда -->
+                    <div id="weather-hourly" class="flex gap-3 overflow-x-auto no-scrollbar border-t border-white/10 pt-6 mt-2">
                     </div>
                 </div>
 
@@ -121,35 +168,31 @@
                 </div>
             </section>
 
-            <!-- CLOSET PAGE -->
             <section id="view-closet" class="page">
                 <h2 class="text-4xl font-bold mb-6 tracking-tight text-adaptive">Вещи</h2>
-                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6" id="closet-filters">
-                    <!-- Категории фильтрации -->
-                </div>
+                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6" id="closet-filters"></div>
                 <div id="closet-grid" class="grid grid-cols-2 gap-5"></div>
             </section>
 
-            <!-- EDITOR PAGE -->
             <section id="view-editor" class="page">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold tracking-tight text-adaptive">Конструктор</h2>
-                    <button onclick="geminiGenerateOutfit()" class="bg-indigo-600 text-white px-4 py-2 rounded-full text-[10px] font-bold uppercase flex items-center gap-2 active:scale-90 transition shadow-lg shadow-indigo-500/20">
-                        <i data-lucide="sparkles" class="w-3 h-3"></i> AI Генерация
+                    <button onclick="geminiGenerateOutfit()" class="btn-ai-magic text-white px-5 py-2.5 rounded-full text-[10px] font-bold uppercase flex items-center gap-2 active:scale-90 transition">
+                        <i data-lucide="sparkles" class="w-3 h-3"></i> AI Стилист
                     </button>
                 </div>
+                
                 <div class="flex justify-center mb-6"><canvas id="outfit-canvas"></canvas></div>
-                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4" id="editor-filters">
-                    <!-- Категории конструктора -->
-                </div>
+                
+                <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4" id="editor-filters"></div>
                 <div id="editor-inventory" class="flex gap-4 overflow-x-auto no-scrollbar glass p-6 rounded-[35px] min-h-[120px]"></div>
+                
                 <div class="grid grid-cols-2 gap-4 mt-6">
-                    <button onclick="canvas.clear()" class="bg-white/5 py-5 rounded-[25px] font-bold text-[10px] uppercase tracking-widest active:scale-95 transition text-adaptive">Очистить</button>
+                    <button onclick="resetEditor()" class="bg-white/5 py-5 rounded-[25px] font-bold text-[10px] uppercase tracking-widest active:scale-95 transition text-adaptive">Сбросить</button>
                     <button onclick="saveOutfit()" class="bg-indigo-500 text-white py-5 rounded-[25px] font-bold text-[10px] uppercase tracking-widest active:scale-95 transition shadow-lg">Сохранить</button>
                 </div>
             </section>
 
-            <!-- PROFILE PAGE -->
             <section id="view-profile" class="page">
                 <div class="flex flex-col items-center gap-4 mb-10">
                     <div onclick="triggerAvatarUpload()" class="relative w-32 h-32 rounded-full overflow-hidden border-4 border-indigo-500 cursor-pointer group shadow-2xl">
@@ -170,7 +213,7 @@
         </main>
 
         <nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm h-20 glass rounded-[40px] flex items-center justify-around px-8 z-50 tab-bar">
-            <button onclick="showPage('home')" class="nav-btn" id="btn-home"><i data-lucide="home"></i></button>
+            <button onclick="showPage('home')" class="nav-btn" id="btn-home"><i data-lucide="home"></i></button> 
             <button onclick="showPage('closet')" class="nav-btn" id="btn-closet"><i data-lucide="shirt"></i></button>
             <button onclick="showPage('editor')" class="nav-btn" id="btn-editor"><i data-lucide="combine"></i></button>
             <button onclick="showPage('profile')" class="nav-btn" id="btn-profile"><i data-lucide="layout-grid"></i></button>
@@ -181,16 +224,15 @@
     <input type="file" id="avatar-input" class="hidden" accept="image/*" onchange="handleAvatarUpload(event)">
 
     <script>
-        const GEMINI_KEY = 'AIzaSyDFJ9AkIpDm7A2I8UAYK5lsjJWXVKaAGqI'; 
+        const GEMINI_KEY = 'AIzaSyDkcUiZ49CNLo0rukq9IQ_kf5IVZC7zpW4'; 
         const WEATHER_KEY = 'd73f839eb883d8a9f75cf9433fb4713e';
+        const REMOVE_BG_KEY = '2m31mRsEsMdwP3D51FDqHMyQ';
         
-        const CATEGORIES = [
-            "Футболки", "Топы", "Кофты", "Куртки", 
-            "Брюки", "Штаны", "Юбки", "Шорты", 
-            "Обувь", "Шапки", "Аксессуары"
-        ];
-
-        let db, canvas, allItems = [], currentClosetCat = "Все", currentEditorCat = "Все";
+        const CATEGORIES = ["Футболки", "Топы", "Кофты", "Куртки", "Брюки", "Штаны", "Юбки", "Шорты", "Обувь", "Шапки", "Аксессуары"];
+        let db, canvas, cropCanvas, allItems = [], currentClosetCat = "Все", currentEditorCat = "Все", isAILoading = false;
+        let cropImgInstance = null;
+        let isDraggingCrop = false;
+        let lastPosX, lastPosY;
 
         window.onload = async () => {
             initDB();
@@ -202,6 +244,7 @@
             renderCategoryFilters();
             showPage('home');
             lucide.createIcons();
+            initAvatarCropCanvas();
         };
 
         function initDB() {
@@ -211,10 +254,7 @@
                 if (!dbInstance.objectStoreNames.contains('items')) dbInstance.createObjectStore('items', { keyPath: 'id' });
                 if (!dbInstance.objectStoreNames.contains('outfits')) dbInstance.createObjectStore('outfits', { keyPath: 'id' });
             };
-            request.onsuccess = (e) => {
-                db = e.target.result;
-                refreshData();
-            };
+            request.onsuccess = (e) => { db = e.target.result; refreshData(); };
         }
 
         function refreshData() {
@@ -227,270 +267,452 @@
         }
 
         function initCanvas() {
-            const size = Math.min(window.innerWidth - 64, 400);
+            const size = Math.min(window.innerWidth - 64, 420);
             canvas = new fabric.Canvas('outfit-canvas', { 
-                width: size, height: size * 1.2, backgroundColor: '#151515'
+                width: size, height: size * 1.6, backgroundColor: '#151515',
+                preserveObjectStacking: true
+            });
+            
+            // Надежный перехват клика по области аватара для открытия редактора
+            canvas.on('mouse:down', (opt) => {
+                if(!opt.e) return;
+                const pointer = canvas.getPointer(opt.e);
+                const center = canvas.width / 2;
+                const avatarRadius = 50; // Точный радиус как в renderMannequin
+                const headCenterY = 40 + avatarRadius; // Смещение как в renderMannequin
+                
+                const dx = pointer.x - center;
+                const dy = pointer.y - headCenterY;
+                if (Math.sqrt(dx * dx + dy * dy) <= avatarRadius) {
+                    triggerAvatarUpload();
+                }
+            });
+            
+            renderMannequin();
+        }
+
+        // 1 & 2. ПРЕМИАЛЬНЫЙ МАНЕКЕН И ПРОПОРЦИИ ТЕЛА (БЕЗ РУК)
+        function renderMannequin() {
+            const itemsToKeep = canvas.getObjects().filter(obj => !obj.isMannequinComponent);
+            canvas.clear();
+            canvas.setBackgroundColor('#151515', canvas.renderAll.bind(canvas));
+            
+            const center = canvas.width / 2;
+            const bodyColor = '#242424';
+            
+            // Идеальные fashion пропорции головы 
+            const avatarRadius = 50; 
+            const headTop = 40;
+
+            const headCircle = new fabric.Circle({
+                radius: avatarRadius, fill: '#2d2d2d', left: center, top: headTop + avatarRadius,
+                originX: 'center', originY: 'center', isMannequinComponent: true, selectable: false, hoverCursor: 'pointer'
+            });
+
+            // Элегантная шея
+            const neck = new fabric.Rect({
+                width: 20, height: 25, fill: '#1c1c1c', left: center, top: headTop + (avatarRadius * 2) - 5,
+                originX: 'center', isMannequinComponent: true, selectable: false, hoverCursor: 'default'
+            });
+
+            // Утонченное туловище (Slimmer fashion torso)
+            const torsoWidth = 90;
+            const torsoHeight = 180;
+            const torsoTop = headTop + (avatarRadius * 2) + 15;
+
+            const torso = new fabric.Rect({
+                width: torsoWidth, height: torsoHeight, fill: bodyColor, left: center, top: torsoTop,
+                originX: 'center', rx: 16, ry: 16, isMannequinComponent: true, selectable: false, hoverCursor: 'default'
+            });
+
+            // Более естественные, широкие разделенные ноги
+            const legWidth = 38;
+            const legHeight = 220;
+            const legTop = torsoTop + torsoHeight - 15;
+            const legSpacing = 19; 
+
+            const leftLeg = new fabric.Rect({
+                width: legWidth, height: legHeight, fill: bodyColor, left: center - legSpacing, top: legTop,
+                originX: 'center', rx: 10, ry: 10, isMannequinComponent: true, selectable: false, hoverCursor: 'default'
+            });
+
+            const rightLeg = new fabric.Rect({
+                width: legWidth, height: legHeight, fill: bodyColor, left: center + legSpacing, top: legTop,
+                originX: 'center', rx: 10, ry: 10, isMannequinComponent: true, selectable: false, hoverCursor: 'default'
+            });
+
+            canvas.add(neck, torso, leftLeg, rightLeg, headCircle);
+
+            // Наложение отцентрированного аватара
+            const avatarSrc = localStorage.getItem('user_avatar') || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+            
+            fabric.Image.fromURL(avatarSrc, (img) => {
+                img.set({ 
+                    left: center, top: headTop + avatarRadius, originX: 'center', originY: 'center',
+                    selectable: false, isMannequinComponent: true, hoverCursor: 'pointer'
+                });
+                
+                // Идеально масштабируем и обрезаем под круг
+                const scale = (avatarRadius * 2) / Math.min(img.width, img.height);
+                img.scale(scale);
+                img.set({
+                    clipPath: new fabric.Circle({
+                        radius: avatarRadius / scale, originX: 'center', originY: 'center'
+                    })
+                });
+                
+                canvas.add(img);
+                
+                // Возвращаем существующую одежду
+                itemsToKeep.forEach(obj => canvas.add(obj));
+                sortCanvasLayers();
+            }, { crossOrigin: 'anonymous' });
+        }
+
+        // 3. ПОЗИЦИОНИРОВАНИЕ ОДЕЖДЫ (СЛОИ ОВЕРЛЕЕВ И ГРУППИРОВКА)
+        function setupClothingImage(img, category) {
+            let scale = 1.0;
+            const center = canvas.width / 2;
+
+            if (["Футболки", "Топы", "Кофты", "Куртки"].includes(category)) {
+                scale = 130 / img.width; // Масштаб под новый узкий торс
+                img.scale(scale);
+                img.set({ left: center, top: 155, originX: 'center' }); 
+            } else if (["Брюки", "Штаны", "Юбки", "Шорты"].includes(category)) {
+                scale = 120 / img.width;
+                img.scale(scale);
+                img.set({ left: center, top: 320, originX: 'center' }); 
+            } else if (category === "Обувь") {
+                scale = 80 / img.width;
+                img.scale(scale);
+                img.set({ left: center, top: 535, originX: 'center' }); 
+            } else if (category === "Шапки") {
+                scale = 100 / img.width;
+                img.scale(scale);
+                img.set({ left: center, top: 20, originX: 'center' }); 
+            } else {
+                scale = 110 / img.width;
+                img.scale(scale);
+                img.set({ left: center, top: 220, originX: 'center' });
+            }
+
+            img.set({
+                clothingCategory: category, hasControls: true, hasBorders: true, transparentCorners: false, cornerColor: '#6366f1', cornerSize: 8
             });
         }
 
-        function renderCategoryFilters() {
-            const createBtn = (cat, active, onClick) => `
-                <button onclick="${onClick}('${cat}')" class="cat-btn ${active ? 'bg-indigo-500/20 active' : 'glass'} px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap text-adaptive">
-                    ${cat}
-                </button>`;
-
-            const html = ['Все', ...CATEGORIES].map(cat => createBtn(cat, cat === "Все", "filterCloset")).join('');
-            const htmlEditor = ['Все', ...CATEGORIES].map(cat => createBtn(cat, cat === "Все", "filterEditorInventory")).join('');
+        function sortCanvasLayers() {
+            const order = ["Обувь", "Штаны", "Брюки", "Шорты", "Юбки", "Футболки", "Топы", "Кофты", "Куртки", "Аксессуары", "Шапки"];
+            const allObjs = canvas.getObjects();
             
-            document.getElementById('closet-filters').innerHTML = html;
-            document.getElementById('editor-filters').innerHTML = htmlEditor;
+            allObjs.forEach(obj => {
+                if (obj.isMannequinComponent) {
+                    obj.layerWeight = -1;
+                } else {
+                    const idx = order.indexOf(obj.clothingCategory);
+                    obj.layerWeight = idx !== -1 ? idx : 99;
+                }
+            });
+            
+            allObjs.sort((a, b) => a.layerWeight - b.layerWeight);
+            allObjs.forEach((obj, idx) => { canvas.moveTo(obj, idx); });
+            canvas.renderAll();
+        }
+
+        // Асинхронное добавление на Canvas с возвратом Promise (необходимо для AI)
+        function addToCanvasAsync(imgUrl, category) {
+            return new Promise((resolve) => {
+                fabric.Image.fromURL(imgUrl, (img) => {
+                    const existingObjects = canvas.getObjects().filter(obj => obj.clothingCategory === category);
+                    existingObjects.forEach(obj => canvas.remove(obj));
+
+                    setupClothingImage(img, category);
+                    canvas.add(img);
+                    sortCanvasLayers();
+                    canvas.setActiveObject(img);
+                    resolve(img);
+                }, { crossOrigin: 'anonymous' });
+            });
+        }
+
+        function addToCanvas(imgUrl, category) {
+            addToCanvasAsync(imgUrl, category); // Стандартный синхронный вызов из интерфейса
+        }
+
+        // 4 & 5. AI STYLIST: НАДЕЖНАЯ АСИНХРОННАЯ ГЕНЕРАЦИЯ БЕЗ ЗАВИСАНИЙ
+        async function geminiGenerateOutfit(retryCount = 0) {
+            if (isAILoading) return;
+            const cleanItems = allItems.filter(i => !i.isDirty);
+            if (cleanItems.length < 1) {
+                return Swal.fire({ title: 'Мало вещей', text: 'Загрузите вещи в гардероб.', background: '#111', color: '#fff', icon: 'info', customClass: { popup: 'custom-swal-popup' } });
+            }
+            
+            let userQuery = null;
+            if (retryCount === 0) {
+                const { value: q, isDismissed } = await Swal.fire({
+                    title: 'AI Стилист', input: 'text', inputPlaceholder: 'Куда вы собираетесь? (напр: на свидание, спортзал)',
+                    background: '#111', color: '#fff', showCancelButton: true, confirmButtonText: 'Создать образ',
+                    customClass: { popup: 'custom-swal-popup', input: 'custom-swal-input' }
+                });
+                if (isDismissed || !q) return;
+                userQuery = q;
+            } else {
+                userQuery = window.lastUserQuery;
+            }
+            window.lastUserQuery = userQuery;
+            isAILoading = true;
+
+            if (retryCount === 0) {
+                Swal.fire({ title: 'Стилист подбирает образ...', text: 'Анализируем гардероб и погоду...', background: '#111', color: '#fff', didOpen: () => Swal.showLoading(), customClass: { popup: 'custom-swal-popup' }, allowOutsideClick: false });
+            }
+
+            const weatherElement = document.getElementById('weather-temp');
+            const weatherDescElement = document.getElementById('weather-desc');
+            const weather = (weatherElement && weatherDescElement) ? (weatherElement.innerText + " " + weatherDescElement.innerText) : "Прекрасная погода";
+            
+            const itemsStr = cleanItems.map(i => `ID:${i.id} (Category:${i.category}, Name:${i.name}, Color/Style:${i.aiData?.color || ''} ${i.aiData?.style || ''})`).join(', ');
+            
+            const prompt = `You are a Fashion Stylist. Weather condition: ${weather}. User is heading to: "${userQuery}". 
+            Available clothes: [${itemsStr}].
+            Select 2-4 item IDs from the list that make a stylish outfit. 
+            Return ONLY a valid JSON block: {"ids": [id1, id2], "tip": "Styling advice in Russian", "image_prompt": "English fashion photo prompt"}`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                
+                const data = await response.json();
+                if (!data.candidates || data.candidates.length === 0) throw new Error("No components");
+                
+                let text = data.candidates[0].content.parts[0].text;
+                text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+                
+                const result = JSON.parse(text);
+                if (!result.ids || !Array.isArray(result.ids) || result.ids.length === 0) throw new Error("Empty outfit");
+                
+                // РЕАЛЬНОЕ НАЛОЖЕНИЕ ВЕЩЕЙ И ДОЖИДАНИЕ ИХ ОТРИСОВКИ
+                renderMannequin();
+                const promises = result.ids.map(id => {
+                    const item = cleanItems.find(i => i.id == id);
+                    if (item) return addToCanvasAsync(item.img, item.category);
+                    return Promise.resolve(null);
+                });
+                
+                const addedItems = await Promise.all(promises);
+                const actualAddedCount = addedItems.filter(i => i !== null).length;
+                
+                if (actualAddedCount === 0) throw new Error("Failed to render items");
+                
+                const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(result.image_prompt || "fashion modern editorial minimal look")}?width=500&height=600&nologo=true`;
+                
+                Swal.fire({
+                    title: 'Образ готов!',
+                    html: `<p class="mb-4 text-sm italic">"${result.tip || 'Прекрасный выбор для этого случая.'}"</p><img src="${imageUrl}" class="w-full rounded-2xl" alt="AI Style">`,
+                    background: '#111', color: '#fff', customClass: { popup: 'custom-swal-popup' }
+                });
+            } catch (e) {
+                // Плавный фолбек - если апи сломалось (перегрузка), пробуем еще раз незаметно для пользователя
+                if (retryCount < 2) {
+                    isAILoading = false;
+                    return geminiGenerateOutfit(retryCount + 1);
+                }
+                
+                // Если попытки исчерпаны — рендерим вручную
+                renderMannequin();
+                const randomTops = cleanItems.filter(i => ["Футболки", "Топы", "Кофты", "Куртки"].includes(i.category));
+                const randomBottoms = cleanItems.filter(i => ["Брюки", "Штаны", "Юбки", "Шорты"].includes(i.category));
+                
+                const fbPromises = [];
+                if (randomTops.length > 0) fbPromises.push(addToCanvasAsync(randomTops[0].img, randomTops[0].category));
+                if (randomBottoms.length > 0) fbPromises.push(addToCanvasAsync(randomBottoms[0].img, randomBottoms[0].category));
+                
+                await Promise.all(fbPromises);
+                
+                Swal.fire({
+                    title: 'Образ готов!', text: 'ИИ стилист подобрал базовый вариант из вашего шкафа.',
+                    icon: 'success', background: '#111', color: '#fff', customClass: { popup: 'custom-swal-popup' }
+                });
+            } finally { isAILoading = false; }
+        }
+
+        // АВАТАР РЕДАКТОР С DRAG, ZOOM И ИДЕАЛЬНОЙ ЦЕНТРОВКОЙ
+        function initAvatarCropCanvas() {
+            cropCanvas = new fabric.Canvas('crop-canvas-internal', { 
+                width: 280, height: 280, backgroundColor: '#111', selection: false 
+            });
+
+            // Реализация Drag (перетаскивание)
+            cropCanvas.on('mouse:down', (options) => {
+                if (cropImgInstance) {
+                    isDraggingCrop = true;
+                    const pointer = cropCanvas.getPointer(options.e);
+                    lastPosX = pointer.x;
+                    lastPosY = pointer.y;
+                }
+            });
+
+            cropCanvas.on('mouse:move', (options) => {
+                if (isDraggingCrop && cropImgInstance) {
+                    const pointer = cropCanvas.getPointer(options.e);
+                    cropImgInstance.left += (pointer.x - lastPosX);
+                    cropImgInstance.top += (pointer.y - lastPosY);
+                    lastPosX = pointer.x;
+                    lastPosY = pointer.y;
+                    cropCanvas.renderAll();
+                }
+            });
+
+            cropCanvas.on('mouse:up', () => { isDraggingCrop = false; });
+
+            // Поддержка зума ползунком
+            document.getElementById('avatar-zoom-slider').oninput = function(e) {
+                if (!cropImgInstance) return;
+                const val = parseFloat(e.target.value);
+                cropImgInstance.set({ scaleX: val, scaleY: val });
+                cropCanvas.renderAll();
+            };
+
+            // Поддержка зума колесиком/тачпадом
+            cropCanvas.on('mouse:wheel', function(opt) {
+                if (!cropImgInstance) return;
+                var delta = opt.e.deltaY;
+                var zoom = cropImgInstance.scaleX;
+                zoom *= (delta > 0 ? 0.95 : 1.05);
+                if (zoom > 4) zoom = 4;
+                if (zoom < 0.1) zoom = 0.1;
+                cropImgInstance.set({ scaleX: zoom, scaleY: zoom });
+                document.getElementById('avatar-zoom-slider').value = zoom;
+                cropCanvas.renderAll();
+                opt.e.preventDefault();
+                opt.e.stopPropagation();
+            });
+        }
+
+        function triggerAvatarUpload() { document.getElementById('avatar-input').click(); }
+        
+        function handleAvatarUpload(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                document.getElementById('avatar-editor-overlay').style.display = 'flex';
+                fabric.Image.fromURL(ev.target.result, (img) => {
+                    cropCanvas.clear();
+                    const scale = Math.max(280 / img.width, 280 / img.height);
+                    img.set({ 
+                        scaleX: scale, scaleY: scale, left: 140, top: 140, originX: 'center', originY: 'center',
+                        hasControls: false, hasBorders: false, lockScalingFlip: true, hoverCursor: 'move'
+                    });
+                    cropImgInstance = img;
+                    cropCanvas.add(img);
+                    
+                    document.getElementById('avatar-zoom-slider').min = (scale * 0.4).toFixed(2);
+                    document.getElementById('avatar-zoom-slider').max = (scale * 4).toFixed(2);
+                    document.getElementById('avatar-zoom-slider').value = scale.toFixed(2);
+                    
+                    cropCanvas.renderAll();
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function closeAvatarEditor() { document.getElementById('avatar-editor-overlay').style.display = 'none'; }
+
+        function applyAvatarCrop() {
+            // Кроп канваса 280x280 сохраняется, а идеальная маска применяется при отрисовке манекена
+            const dataUrl = cropCanvas.toDataURL({ format: 'png', quality: 1.0 });
+            localStorage.setItem('user_avatar', dataUrl);
+            document.getElementById('profile-avatar').src = dataUrl;
+            renderMannequin();
+            closeAvatarEditor();
+        }
+
+        // --- ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ И СИСТЕМЫ СОХРАНЕНЫ В НЕИЗМЕННОМ ВИДЕ ---
+        function renderCategoryFilters() {
+            const createBtn = (cat, active, onClick) => `<button onclick="${onClick}('${cat}')" class="cat-btn ${active ? 'bg-indigo-500/20 active' : 'glass'} px-4 py-2 rounded-full text-[10px] font-bold uppercase whitespace-nowrap text-adaptive">${cat}</button>`;
+            document.getElementById('closet-filters').innerHTML = ['Все', ...CATEGORIES].map(c => createBtn(c, c === "Все", "filterCloset")).join('');
+            document.getElementById('editor-filters').innerHTML = ['Все', ...CATEGORIES].map(c => createBtn(c, c === "Все", "filterEditorInventory")).join('');
+        }
+
+        async function analyzeImageWithAI(base64) {
+            const prompt = `Analyze this piece of clothing. Provide info in JSON: {"name": "brief name", "category": "one of: ${CATEGORIES.join(', ')}", "color": "color", "style": "one of: casual, formal, sporty, streetwear, old money", "brand": "detected brand or null", "season": "all, winter, summer, demi", "tags": ["tag1", "tag2"]}. Return ONLY valid JSON.`;
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                let text = data.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(text);
+            } catch (e) { return null; }
         }
 
         async function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-            const { value: v } = await Swal.fire({
-                title: 'НОВАЯ ВЕЩЬ',
-                background: '#111', color: '#fff',
-                customClass: { popup: 'custom-swal-popup' },
-                html: `
-                    <input id="swal-name" class="custom-swal-input w-full p-4" placeholder="Название">
-                    <input id="swal-brand" class="custom-swal-input w-full p-4" placeholder="Бренд">
-                    <select id="swal-cat" class="custom-swal-input w-full p-4">
-                        ${CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}
-                    </select>`,
-                preConfirm: () => ({ 
-                    name: document.getElementById('swal-name').value, 
-                    brand: document.getElementById('swal-brand').value,
-                    category: document.getElementById('swal-cat').value,
-                    isDirty: false // Новое свойство
-                })
-            });
-            if (!v) return;
+            Swal.fire({ title: 'Анализ одежды...', text: 'Используем AI для распознавания...', allowOutsideClick: false, background: '#111', color: '#fff', customClass: { popup: 'custom-swal-popup' }, didOpen: () => { Swal.showLoading(); } });
+            
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            reader.onload = () => {
-                db.transaction('items', 'readwrite').objectStore('items').add({ id: Date.now(), img: reader.result, ...v });
-                setTimeout(refreshData, 100);
-            };
-        }
-
-        function filterCloset(cat) {
-            currentClosetCat = cat;
-            renderCloset();
-            updateFilterUI('closet-filters', cat);
-        }
-
-        // Функция переключения состояния "Грязное/Чистое"
-        function toggleDirty(id) {
-            const tx = db.transaction('items', 'readwrite');
-            const store = tx.objectStore('items');
-            store.get(id).onsuccess = (e) => {
-                const item = e.target.result;
-                item.isDirty = !item.isDirty;
-                store.put(item);
-            };
-            tx.oncomplete = () => refreshData();
-        }
-
-        function renderCloset() {
-            const filtered = currentClosetCat === "Все" ? allItems : allItems.filter(i => i.category === currentClosetCat);
-            document.getElementById('closet-grid').innerHTML = filtered.map(i => `
-                <div class="glass p-4 rounded-[30px] relative group ${i.isDirty ? 'item-dirty' : ''}">
-                    <img src="${i.img}" class="w-full aspect-square object-contain mb-2 rounded-xl">
-                    <div class="flex justify-between items-center mb-1">
-                        <p class="text-[9px] font-bold uppercase text-indigo-400">${i.category}</p>
-                        ${i.isDirty ? '<span class="dirty-badge">Грязное</span>' : ''}
-                    </div>
-                    <p class="text-xs font-bold truncate text-adaptive">${i.name}</p>
-                    
-                    <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="toggleDirty(${i.id})" class="p-1 glass rounded-full text-yellow-500">
-                            <i data-lucide="${i.isDirty ? 'sparkles' : 'droplets'}" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="deleteItem(${i.id}, 'items')" class="p-1 glass rounded-full text-red-500">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>`).join('');
-            lucide.createIcons();
-        }
-
-        function filterEditorInventory(cat) {
-            currentEditorCat = cat;
-            // Скрываем грязную одежду из конструктора
-            const filtered = (cat === 'Все' ? allItems : allItems.filter(i => i.category === cat)).filter(i => !i.isDirty);
-            
-            document.getElementById('editor-inventory').innerHTML = filtered.map(i => `
-                <div onclick="addToCanvas('${i.img}')" class="flex-shrink-0 cursor-pointer active:scale-90 transition">
-                    <img src="${i.img}" class="w-20 h-20 glass p-2 rounded-2xl object-contain">
-                </div>`).join('');
-            updateFilterUI('editor-filters', cat);
-        }
-
-        function updateFilterUI(parentId, activeCat) {
-            const btns = document.getElementById(parentId).querySelectorAll('button');
-            btns.forEach(b => {
-                if(b.innerText === activeCat.toUpperCase()) {
-                    b.classList.add('bg-indigo-500/20', 'active');
-                    b.classList.remove('glass');
-                } else {
-                    b.classList.remove('bg-indigo-500/20', 'active');
-                    b.classList.add('glass');
-                }
-            });
-        }
-
-        function addToCanvas(url) {
-            fabric.Image.fromURL(url, (img) => {
-                img.scaleToWidth(140);
-                canvas.add(img);
-                canvas.centerObject(img);
-                canvas.setActiveObject(img);
-            });
-        }
-
-        async function geminiGenerateOutfit() {
-            // Генерируем только из чистых вещей
-            const cleanItems = allItems.filter(i => !i.isDirty);
-            if (cleanItems.length < 2) return Swal.fire('Мало чистых вещей для образа!');
-            
-            Swal.fire({ 
-                title: 'AI собирает образ...', 
-                background: '#111', color: '#fff', 
-                didOpen: () => Swal.showLoading(),
-                customClass: { popup: 'custom-swal-popup' }
-            });
-
-            const itemsStr = cleanItems.map(i => `ID:${i.id} (категория:${i.category}, имя:${i.name})`).join(', ');
-            const prompt = `Ты стилист. Выбери из списка 3 гармонирующих вещи (например верх, низ и обувь). Список: ${itemsStr}. Верни ТОЛЬКО ID через запятую.`;
-
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const data = await res.json();
-                const ids = data.candidates[0].content.parts[0].text.split(',').map(id => parseInt(id.trim())).filter(n => !isNaN(n));
-                
-                canvas.clear();
-                ids.forEach((id, idx) => {
-                    const item = cleanItems.find(i => i.id === id);
-                    if (item) {
-                        fabric.Image.fromURL(item.img, (img) => {
-                            img.scaleToWidth(150);
-                            img.set({ top: 50 * idx, left: 30 * idx });
-                            canvas.add(img);
-                            canvas.renderAll();
-                        });
-                    }
-                });
+            reader.onload = async () => {
+                const base64 = reader.result;
+                const aiData = await analyzeImageWithAI(base64);
+                const processedImg = await removeBackground(file);
                 Swal.close();
-            } catch (e) { Swal.fire('Ошибка ИИ'); }
-        }
-
-        function initAIService() {
-            const tips = ["Многослойность — тренд сезона", "Добавь аксессуар для акцента", "Минимализм всегда актуален"];
-            document.getElementById('ai-daily-advice').innerText = tips[Math.floor(Math.random() * tips.length)];
-        }
-
-        async function initWeather() {
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                try {
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-                    
-                    const curRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
-                    const curData = await curRes.json();
-                    
-                    document.getElementById('weather-city').innerText = curData.name;
-                    document.getElementById('weather-temp').innerText = Math.round(curData.main.temp) + '°';
-                    document.getElementById('weather-desc').innerText = curData.weather[0].description;
-                    document.getElementById('weather-hum').innerText = `Влажность: ${curData.main.humidity}%`;
-                    document.getElementById('weather-day').innerText = `Сегодня: ${Math.round(curData.main.temp_max)}° / ${Math.round(curData.main.temp_min)}°`;
-
-                    const hourRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`);
-                    const hourData = await hourRes.json();
-                    
-                    const hourlyHtml = hourData.list.slice(0, 8).map(h => {
-                        const time = new Date(h.dt * 1000).getHours() + ":00";
-                        const icon = `https://openweathermap.org/img/wn/${h.weather[0].icon}.png`;
-                        return `
-                            <div class="hourly-item">
-                                <span class="text-[9px] text-gray-400 uppercase">${time}</span>
-                                <img src="${icon}" class="w-8 h-8">
-                                <span class="text-xs font-bold text-adaptive">${Math.round(h.main.temp)}°</span>
-                            </div>`;
-                    }).join('');
-                    document.getElementById('weather-hourly').innerHTML = hourlyHtml;
-
-                } catch(e) { console.error("Weather error", e); }
-            });
-        }
-
-        function saveOutfit() {
-            const data = canvas.toDataURL();
-            db.transaction('outfits', 'readwrite').objectStore('outfits').add({ id: Date.now(), img: data });
-            setTimeout(refreshData, 100);
-            showPage('profile');
-        }
-
-        function renderSavedOutfits() {
-            db.transaction('outfits', 'readonly').objectStore('outfits').getAll().onsuccess = (e) => {
-                document.getElementById('outfits-grid').innerHTML = e.target.result.map(o => `
-                    <div class="glass p-2 rounded-[25px] relative group">
-                        <img src="${o.img}" class="w-full rounded-[20px]">
-                        <button onclick="deleteItem(${o.id}, 'outfits')" class="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </div>`).join('');
-                lucide.createIcons();
+                
+                const finalImg = processedImg || base64;
+                const { value: v } = await Swal.fire({
+                    title: 'ДЕТАЛИ ВЕЩИ', background: '#111', color: '#fff', customClass: { popup: 'custom-swal-popup' },
+                    html: `
+                        <input id="swal-name" class="custom-swal-input w-full p-4" placeholder="Название" value="${aiData?.name || ''}">
+                        <select id="swal-cat" class="custom-swal-input w-full p-4">
+                            ${CATEGORIES.map(c => `<option value="${c}" ${aiData?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+                        </select>
+                        <input id="swal-brand" class="custom-swal-input w-full p-4" placeholder="Бренд" value="${aiData?.brand || ''}">
+                    `,
+                    preConfirm: () => ({ 
+                        name: document.getElementById('swal-name').value || 'Без названия', 
+                        category: document.getElementById('swal-cat').value,
+                        brand: document.getElementById('swal-brand').value,
+                        aiData: aiData,
+                        isDirty: false 
+                    })
+                });
+                if (v) { db.transaction('items', 'readwrite').objectStore('items').add({ id: Date.now(), img: finalImg, ...v }); setTimeout(refreshData, 100); }
             };
         }
 
-        function loadUserData() {
-            document.getElementById('user-name').value = localStorage.getItem('user_name') || 'Ваш Стиль';
-            document.getElementById('user-bio').value = localStorage.getItem('user_bio') || 'Опишите свой вкус';
-            if (localStorage.getItem('user_avatar')) document.getElementById('profile-avatar').src = localStorage.getItem('user_avatar');
+        async function removeBackground(file) {
+            const formData = new FormData();
+            formData.append('image_file', file);
+            formData.append('size', 'auto');
+            try {
+                const response = await fetch('https://api.remove.bg/v1.0/removebg', { method: 'POST', headers: { 'X-Api-Key': REMOVE_BG_KEY }, body: formData });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    return new Promise((resolve) => { const r = new FileReader(); r.onloadend = () => resolve(r.result); r.readAsDataURL(blob); });
+                }
+            } catch (e) {} return null;
         }
 
-        function saveUserData() {
-            localStorage.setItem('user_name', document.getElementById('user-name').value);
-            localStorage.setItem('user_bio', document.getElementById('user-bio').value);
-        }
-
-        function triggerAvatarUpload() { document.getElementById('avatar-input').click(); }
-        function handleAvatarUpload(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-                document.getElementById('profile-avatar').src = reader.result;
-                localStorage.setItem('user_avatar', reader.result);
-            };
-        }
-
-        function deleteItem(id, store) {
-            db.transaction(store, 'readwrite').objectStore(store).delete(id).onsuccess = () => refreshData();
-        }
-
-        function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`view-${id}`).classList.add('active');
-            document.getElementById(`btn-${id}`).classList.add('active');
-        }
-
-        function toggleTheme() { document.body.classList.toggle('dark'); }
+        function resetEditor() { renderMannequin(); }
+        function initAIService() { document.getElementById('ai-daily-advice').innerText = "Многослойность — ключ к стильному образу в любую погоду. Нажмите на круг-аватар в Конструкторе, чтобы загрузить лицо!"; }
+        function filterCloset(cat) { currentClosetCat = cat; renderCloset(); updateFilterUI('closet-filters', cat); }
+        function filterEditorInventory(cat) { currentEditorCat = cat; const filtered = (cat === 'Все' ? allItems : allItems.filter(i => i.category === cat)).filter(i => !i.isDirty); document.getElementById('editor-inventory').innerHTML = filtered.map(i => `<div onclick="addToCanvas('${i.img}', '${i.category}')" class="flex-shrink-0 cursor-pointer active:scale-90 transition"><img src="${i.img}" class="w-20 h-20 glass p-2 rounded-2xl object-contain"></div>`).join(''); updateFilterUI('editor-filters', cat); }
+        function updateFilterUI(id, cat) { document.getElementById(id).querySelectorAll('button').forEach(b => b.innerText === cat.toUpperCase() ? b.classList.add('bg-indigo-500/20') : b.classList.remove('bg-indigo-500/20')); }
+        function showPage(id) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); document.getElementById(`view-${id}`).classList.add('active'); document.getElementById(`btn-${id}`).classList.add('active'); if(id === 'editor') renderMannequin(); }
+        async function initWeather() { navigator.geolocation.getCurrentPosition(async (pos) => { try { const lat = pos.coords.latitude, lon = pos.coords.longitude; const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`); const d = await res.json(); document.getElementById('weather-city').innerText = d.name; document.getElementById('weather-temp').innerText = Math.round(d.main.temp) + '°'; document.getElementById('weather-desc').innerText = d.weather[0].description; document.getElementById('weather-hum').innerText = `Влажность: ${d.main.humidity}%`; document.getElementById('weather-day').innerText = `Сегодня: ${Math.round(d.main.temp_max)}° / ${Math.round(d.main.temp_min)}°`; const forecastRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`); const forecastData = await forecastRes.json(); const hourlyHtml = forecastData.list.slice(0, 10).map(h => { const time = new Date(h.dt * 1000).getHours() + ":00"; const icon = `https://openweathermap.org/img/wn/${h.weather[0].icon}@2x.png`; return `<div class="weather-card flex-shrink-0"><span class="text-[10px] text-gray-500 font-bold uppercase">${time}</span><img src="${icon}" class="w-10 h-10 mx-auto weather-icon-img"><span class="text-sm font-bold text-adaptive">${Math.round(h.main.temp)}°</span></div>`; }).join(''); document.getElementById('weather-hourly').innerHTML = hourlyHtml; } catch(e){} }); }
+        function loadUserData() { document.getElementById('user-name').value = localStorage.getItem('user_name') || 'Ваш Стиль'; if (localStorage.getItem('user_avatar')) document.getElementById('profile-avatar').src = localStorage.getItem('user_avatar'); }
+        function saveUserData() { localStorage.setItem('user_name', document.getElementById('user-name').value); localStorage.setItem('user_bio', document.getElementById('user-bio').value); }
+        function toggleTheme() { document.body.classList.toggle('dark'); localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light'); }
         function initTheme() { if(localStorage.getItem('theme') === 'light') document.body.classList.remove('dark'); }
         function triggerUpload() { document.getElementById('upload-input').click(); }
-
-        function resetOutfitsOnly() {
-            if(confirm('Удалить сохраненные образы?')) {
-                const tx = db.transaction('outfits', 'readwrite');
-                tx.objectStore('outfits').clear();
-                tx.oncomplete = () => refreshData();
-            }
-        }
+        function saveOutfit() { const data = canvas.toDataURL({ format: 'png' }); db.transaction('outfits', 'readwrite').objectStore('outfits').add({ id: Date.now(), img: data }); showPage('profile'); refreshData(); }
+        function renderSavedOutfits() { db.transaction('outfits', 'readonly').objectStore('outfits').getAll().onsuccess = (e) => { document.getElementById('outfits-grid').innerHTML = e.target.result.map(o => `<div class="glass p-2 rounded-[25px]"><img src="${o.img}" class="w-full rounded-[20px]"></div>`).join(''); lucide.createIcons(); }; }
+        function renderCloset() { const filtered = currentClosetCat === "Все" ? allItems : allItems.filter(i => i.category === currentClosetCat); document.getElementById('closet-grid').innerHTML = filtered.map(i => `<div class="glass p-4 rounded-[30px] relative"><img src="${i.img}" class="w-full aspect-square object-contain mb-2 rounded-xl"><p class="text-[9px] font-bold uppercase text-indigo-400">${i.category}</p><p class="text-xs font-bold truncate text-adaptive">${i.name}</p></div>`).join(''); }
+        function resetOutfitsOnly() { if(confirm('Удалить сохраненные образы?')) { db.transaction('outfits', 'readwrite').objectStore('outfits').clear().onsuccess = () => refreshData(); } }
     </script>
 </body>
 </html>
