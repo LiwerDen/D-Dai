@@ -81,7 +81,7 @@
             box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
         }
 
-        .item-dirty { opacity: 0.6; filter: grayscale(0.5); }
+        .item-dirty { opacity: 0.5; filter: grayscale(1); }
         .dirty-badge { background: #f59e0b; color: black; font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
 
         /* Avatar Editor Styles */
@@ -715,7 +715,16 @@
             } catch (e) {} return null;
         }
 
-        function resetEditor() { renderMannequin(); }
+        function resetEditor() {
+    canvas.getObjects().forEach(obj => {
+        if (!obj.isMannequinComponent) {
+            canvas.remove(obj);
+        }
+    });
+
+    canvas.discardActiveObject();
+    canvas.renderAll();
+}
         function initAIService() { document.getElementById('ai-daily-advice').innerText = "Многослойность — ключ к стильному образу в любую погоду. Нажмите на круг-аватар в Конструкторе, чтобы загрузить лицо!"; }
         function filterCloset(cat) { currentClosetCat = cat; renderCloset(); updateFilterUI('closet-filters', cat); }
         function filterEditorInventory(cat) { currentEditorCat = cat; const filtered = (cat === 'Все' ? allItems : allItems.filter(i => i.category === cat)).filter(i => !i.isDirty); document.getElementById('editor-inventory').innerHTML = filtered.map(i => `<div onclick="addToCanvas('${i.img}', '${i.category}')" class="flex-shrink-0 cursor-pointer active:scale-90 transition"><img src="${i.img}" class="w-20 h-20 glass p-2 rounded-2xl object-contain"></div>`).join(''); updateFilterUI('editor-filters', cat); }
@@ -729,7 +738,125 @@
         function triggerUpload() { document.getElementById('upload-input').click(); }
         function saveOutfit() { const data = canvas.toDataURL({ format: 'png' }); db.transaction('outfits', 'readwrite').objectStore('outfits').add({ id: Date.now(), img: data }); showPage('profile'); refreshData(); }
         function renderSavedOutfits() { db.transaction('outfits', 'readonly').objectStore('outfits').getAll().onsuccess = (e) => { document.getElementById('outfits-grid').innerHTML = e.target.result.map(o => `<div class="glass p-2 rounded-[25px]"><img src="${o.img}" class="w-full rounded-[20px]"></div>`).join(''); lucide.createIcons(); }; }
-        function renderCloset() { const filtered = currentClosetCat === "Все" ? allItems : allItems.filter(i => i.category === currentClosetCat); document.getElementById('closet-grid').innerHTML = filtered.map(i => `<div class="glass p-4 rounded-[30px] relative"><img src="${i.img}" class="w-full aspect-square object-contain mb-2 rounded-xl"><p class="text-[9px] font-bold uppercase text-indigo-400">${i.category}</p><p class="text-xs font-bold truncate text-adaptive">${i.name}</p></div>`).join(''); }
+        function renderCloset() {
+    const filtered = currentClosetCat === "Все"
+        ? allItems
+        : allItems.filter(i => i.category === currentClosetCat);
+
+    document.getElementById('closet-grid').innerHTML = filtered.map(i => `
+        <div class="glass p-4 rounded-[30px] relative group ${i.isDirty ? 'item-dirty' : ''}">
+
+            ${i.isDirty ? `
+                <div class="absolute top-3 left-3 dirty-badge z-10">
+                    Грязная
+                </div>
+            ` : ''}
+
+            <!-- ACTION BUTTONS -->
+            <div class="absolute top-3 right-3 flex gap-2 z-20 opacity-0 group-hover:opacity-100 transition">
+
+                ${
+                    i.isDirty
+                    ? `
+                        <button
+                            onclick="restoreClothing(${i.id})"
+                            class="w-8 h-8 rounded-full bg-green-500/20 backdrop-blur flex items-center justify-center active:scale-90 transition"
+                        >
+                            <i data-lucide="rotate-ccw" class="w-4 h-4 text-green-400"></i>
+                        </button>
+                    `
+                    : `
+                        <button
+                            onclick="markDirty(${i.id})"
+                            class="w-8 h-8 rounded-full bg-yellow-500/20 backdrop-blur flex items-center justify-center active:scale-90 transition"
+                        >
+                            <i data-lucide="droplets" class="w-4 h-4 text-yellow-400"></i>
+                        </button>
+                    `
+                }
+
+                <button
+                    onclick="deleteItem(${i.id})"
+                    class="w-8 h-8 rounded-full bg-red-500/20 backdrop-blur flex items-center justify-center active:scale-90 transition"
+                >
+                    <i data-lucide="x" class="w-4 h-4 text-red-400"></i>
+                </button>
+
+            </div>
+
+            <img src="${i.img}" class="w-full aspect-square object-contain mb-2 rounded-xl">
+
+            <p class="text-[9px] font-bold uppercase text-indigo-400">
+                ${i.category}
+            </p>
+
+            <p class="text-xs font-bold truncate text-adaptive">
+                ${i.name}
+            </p>
+
+        </div>
+    `).join('');
+
+    lucide.createIcons();
+}function markDirty(id) {
+    const tx = db.transaction('items', 'readwrite');
+    const store = tx.objectStore('items');
+
+    const req = store.get(id);
+
+    req.onsuccess = () => {
+        const item = req.result;
+
+        if (!item) return;
+
+        item.isDirty = true;
+
+        store.put(item).onsuccess = () => {
+            refreshData();
+        };
+    };
+}
+
+function restoreClothing(id) {
+    const tx = db.transaction('items', 'readwrite');
+    const store = tx.objectStore('items');
+
+    const req = store.get(id);
+
+    req.onsuccess = () => {
+        const item = req.result;
+
+        if (!item) return;
+
+        item.isDirty = false;
+
+        store.put(item).onsuccess = () => {
+            refreshData();
+        };
+    };
+}
+
+function deleteItem(id) {
+    if (!confirm('Удалить вещь?')) return;
+
+    db.transaction('items', 'readwrite')
+        .objectStore('items')
+        .delete(id)
+        .onsuccess = () => refreshData();
+}
+            
+
+
+
+
+
+
+
+
+
+
+
+
         function resetOutfitsOnly() { if(confirm('Удалить сохраненные образы?')) { db.transaction('outfits', 'readwrite').objectStore('outfits').clear().onsuccess = () => refreshData(); } }
     </script>
 </body>
