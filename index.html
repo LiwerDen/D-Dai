@@ -1,40 +1,60 @@
-<!DOCTYPE html>
-<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI Wardrobe Pro</title>
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3050/3050231.png">
 
+    <title>AI Wardrobe</title>
+
+    <!-- iOS HOME SCREEN ICONS (FIXED) -->
+<link rel="apple-touch-icon" sizes="180x180" href="https://i.imgur.com/8QZ7y1m.png">
+<link rel="apple-touch-icon" sizes="152x152" href="https://i.imgur.com/8QZ7y1m.png">
+<link rel="apple-touch-icon" sizes="120x120" href="https://i.imgur.com/8QZ7y1m.png">
+
+<link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/8QZ7y1m.png">
+<link rel="icon" type="image/png" sizes="16x16" href="https://i.imgur.com/8QZ7y1m.png">
+
+<meta name="apple-mobile-web-app-title" content="Wardrobe AI">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- LIBS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- FONT -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-        
-        :root { --bg: #ffffff; --text: #000000; --accent: #6366f1; }
-        .dark { --bg: #000000; --text: #ffffff; }
+
+        :root {
+            --bg: #ffffff;
+            --text: #000000;
+            --accent: #6366f1;
+        }
+
+        .dark {
+            --bg: #000000;
+            --text: #ffffff;
+        }
 
         body {
             background-color: var(--bg);
             font-family: 'Plus Jakarta Sans', sans-serif;
             transition: background 0.4s ease, color 0.4s ease;
-            user-select: none; -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
             overflow-x: hidden;
         }
 
         body.dark { color: #ffffff; }
         body:not(.dark) { color: #000000; }
+
         .text-adaptive { color: inherit; }
 
         .glass {
             background: rgba(120, 120, 120, 0.05);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(120, 120, 120, 0.1);
         }
 
@@ -46,18 +66,40 @@
             min-width: 80px;
             text-align: center;
         }
-        .dark .weather-card { background: rgba(255, 255, 255, 0.05); }
-        body:not(.dark) .weather-card { background: rgba(0, 0, 0, 0.03); border-color: rgba(0, 0, 0, 0.05); }
+
+        .dark .weather-card {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        body:not(.dark) .weather-card {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.05);
+        }
 
         .weather-icon-img {
             filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.4));
         }
-        body:not(.dark) .weather-icon-img { filter: brightness(0.8) contrast(1.2); }
 
-        header { padding-top: env(safe-area-inset-top, 1.2rem) !important; height: 6rem; display: flex; align-items: center; }
-        main { padding-top: 7.5rem !important; }
+        body:not(.dark) .weather-icon-img {
+            filter: brightness(0.8) contrast(1.2);
+        }
 
-        .page { display: none; animation: pageIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        header {
+            padding-top: env(safe-area-inset-top, 1.2rem) !important;
+            height: 6rem;
+            display: flex;
+            align-items: center;
+        }
+
+        main {
+            padding-top: 7.5rem !important;
+        }
+
+        .page {
+            display: none;
+            animation: pageIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
         .page.active { display: block; }
 
         @keyframes pageIn {
@@ -65,15 +107,39 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .nav-btn.active { color: var(--accent); transform: scale(1.1); }
-        .tab-bar { padding-bottom: env(safe-area-inset-bottom, 1.5rem); }
-        .canvas-container { margin: 0 auto !important; border-radius: 40px; overflow: hidden; background: #151515 !important; box-shadow: 0 30px 60px rgba(0,0,0,0.5); }
+        .nav-btn.active {
+            color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        .tab-bar {
+            padding-bottom: env(safe-area-inset-bottom, 1.5rem);
+        }
+
+        .canvas-container {
+            margin: 0 auto !important;
+            border-radius: 40px;
+            overflow: hidden;
+            background: #151515 !important;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        .custom-swal-popup { border-radius: 35px !important; background: #111 !important; border: 1px solid #333 !important; color: white !important; }
-        .custom-swal-input { 
-            background: #1a1a1a !important; border: 1px solid #333 !important; 
-            border-radius: 15px !important; color: white !important; font-family: inherit; margin-bottom: 10px !important;
+
+        .custom-swal-popup {
+            border-radius: 35px !important;
+            background: #111 !important;
+            border: 1px solid #333 !important;
+            color: white !important;
+        }
+
+        .custom-swal-input {
+            background: #1a1a1a !important;
+            border: 1px solid #333 !important;
+            border-radius: 15px !important;
+            color: white !important;
+            font-family: inherit;
+            margin-bottom: 10px !important;
         }
 
         .btn-ai-magic {
@@ -81,18 +147,42 @@
             box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
         }
 
-        .item-dirty { opacity: 0.5; filter: grayscale(1); }
-        .dirty-badge { background: #f59e0b; color: black; font-size: 8px; padding: 2px 6px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
-
-        /* Avatar Editor Styles */
-        #avatar-editor-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px; touch-action: none;
+        .item-dirty {
+            opacity: 0.5;
+            filter: grayscale(1);
         }
+
+        .dirty-badge {
+            background: #f59e0b;
+            color: black;
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        #avatar-editor-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            touch-action: none;
+        }
+
         .crop-area {
-            width: 280px; height: 280px; border-radius: 50%; border: 2px solid #6366f1;
-            overflow: hidden; position: relative; background: #111;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            border: 2px solid #6366f1;
+            overflow: hidden;
+            position: relative;
+            background: #111;
             box-shadow: 0 0 0 1000px rgba(0,0,0,0.6);
         }
     </style>
@@ -730,7 +820,111 @@
         function filterEditorInventory(cat) { currentEditorCat = cat; const filtered = (cat === 'Все' ? allItems : allItems.filter(i => i.category === cat)).filter(i => !i.isDirty); document.getElementById('editor-inventory').innerHTML = filtered.map(i => `<div onclick="addToCanvas('${i.img}', '${i.category}')" class="flex-shrink-0 cursor-pointer active:scale-90 transition"><img src="${i.img}" class="w-20 h-20 glass p-2 rounded-2xl object-contain"></div>`).join(''); updateFilterUI('editor-filters', cat); }
         function updateFilterUI(id, cat) { document.getElementById(id).querySelectorAll('button').forEach(b => b.innerText === cat.toUpperCase() ? b.classList.add('bg-indigo-500/20') : b.classList.remove('bg-indigo-500/20')); }
         function showPage(id) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); document.getElementById(`view-${id}`).classList.add('active'); document.getElementById(`btn-${id}`).classList.add('active'); if(id === 'editor') renderMannequin(); }
-        async function initWeather() { navigator.geolocation.getCurrentPosition(async (pos) => { try { const lat = pos.coords.latitude, lon = pos.coords.longitude; const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`); const d = await res.json(); document.getElementById('weather-city').innerText = d.name; document.getElementById('weather-temp').innerText = Math.round(d.main.temp) + '°'; document.getElementById('weather-desc').innerText = d.weather[0].description; document.getElementById('weather-hum').innerText = `Влажность: ${d.main.humidity}%`; document.getElementById('weather-day').innerText = `Сегодня: ${Math.round(d.main.temp_max)}° / ${Math.round(d.main.temp_min)}°`; const forecastRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`); const forecastData = await forecastRes.json(); const hourlyHtml = forecastData.list.slice(0, 10).map(h => { const time = new Date(h.dt * 1000).getHours() + ":00"; const icon = `https://openweathermap.org/img/wn/${h.weather[0].icon}@2x.png`; return `<div class="weather-card flex-shrink-0"><span class="text-[10px] text-gray-500 font-bold uppercase">${time}</span><img src="${icon}" class="w-10 h-10 mx-auto weather-icon-img"><span class="text-sm font-bold text-adaptive">${Math.round(h.main.temp)}°</span></div>`; }).join(''); document.getElementById('weather-hourly').innerHTML = hourlyHtml; } catch(e){} }); }
+        async function initWeather() {
+
+    const loadWeather = async (lat, lon) => {
+        try {
+
+            const res = await fetch(
+                `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`
+            );
+
+            const d = await res.json();
+
+            document.getElementById('weather-city').innerText = d.name;
+            document.getElementById('weather-temp').innerText = Math.round(d.main.temp) + '°';
+            document.getElementById('weather-desc').innerText = d.weather[0].description;
+            document.getElementById('weather-hum').innerText = `Влажность: ${d.main.humidity}%`;
+            document.getElementById('weather-day').innerText =
+                `Сегодня: ${Math.round(d.main.temp_max)}° / ${Math.round(d.main.temp_min)}°`;
+
+            const forecastRes = await fetch(
+                `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`
+            );
+
+            const forecastData = await forecastRes.json();
+
+            const hourlyHtml = forecastData.list.slice(0, 10).map(h => {
+
+                const time = new Date(h.dt * 1000).getHours() + ":00";
+
+                const icon =
+                    `https://openweathermap.org/img/wn/${h.weather[0].icon}@2x.png`;
+
+                return `
+                    <div class="weather-card flex-shrink-0">
+                        <span class="text-[10px] text-gray-500 font-bold uppercase">
+                            ${time}
+                        </span>
+
+                        <img src="${icon}" class="w-10 h-10 mx-auto weather-icon-img">
+
+                        <span class="text-sm font-bold text-adaptive">
+                            ${Math.round(h.main.temp)}°
+                        </span>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('weather-hourly').innerHTML = hourlyHtml;
+
+        } catch (e) {
+            console.log(e);
+        }
+    };
+
+    const requestLocation = () => {
+
+        if (!navigator.geolocation) {
+            document.getElementById('weather-city').innerText = 'Геолокация недоступна';
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+
+            async (pos) => {
+
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+
+                localStorage.setItem('weather_lat', lat);
+                localStorage.setItem('weather_lon', lon);
+
+                loadWeather(lat, lon);
+            },
+
+            async () => {
+
+                const savedLat = localStorage.getItem('weather_lat');
+                const savedLon = localStorage.getItem('weather_lon');
+
+                if (savedLat && savedLon) {
+                    loadWeather(savedLat, savedLon);
+                    return;
+                }
+
+                document.getElementById('weather-city').innerText =
+                    'Разрешите геопозицию';
+            },
+
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            }
+        );
+    };
+
+    requestLocation();
+
+    document.body.addEventListener(
+        'click',
+        () => {
+            requestLocation();
+        },
+        { once: true }
+    );
+}
         function loadUserData() { document.getElementById('user-name').value = localStorage.getItem('user_name') || 'Ваш Стиль'; if (localStorage.getItem('user_avatar')) document.getElementById('profile-avatar').src = localStorage.getItem('user_avatar'); }
         function saveUserData() { localStorage.setItem('user_name', document.getElementById('user-name').value); localStorage.setItem('user_bio', document.getElementById('user-bio').value); }
         function toggleTheme() { document.body.classList.toggle('dark'); localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light'); }
