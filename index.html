@@ -820,7 +820,7 @@
         function showPage(id) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); document.getElementById(`view-${id}`).classList.add('active'); document.getElementById(`btn-${id}`).classList.add('active'); if(id === 'editor') renderMannequin(); }
         async function initWeather() {
 
-    const weatherCity = document.getElementById('weather-city');
+    const cityEl = document.getElementById('weather-city');
 
     const loadWeather = async (lat, lon) => {
 
@@ -832,7 +832,9 @@
 
             const d = await res.json();
 
-            document.getElementById('weather-city').innerText = d.name || 'Город';
+            document.getElementById('weather-city').innerText =
+                d.name || 'Город';
+
             document.getElementById('weather-temp').innerText =
                 Math.round(d.main.temp) + '°';
 
@@ -845,6 +847,7 @@
             document.getElementById('weather-day').innerText =
                 `Сегодня: ${Math.round(d.main.temp_max)}° / ${Math.round(d.main.temp_min)}°`;
 
+            // ПОЧАСОВАЯ ПОГОДА
             const forecastRes = await fetch(
                 `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`
             );
@@ -891,8 +894,7 @@
         }
     };
 
-    // GPS (НАСТОЯЩЕЕ МЕСТОПОЛОЖЕНИЕ)
-    const getGPSLocation = () => {
+    const getGPS = () => {
 
         return new Promise((resolve) => {
 
@@ -911,83 +913,89 @@
                     });
                 },
 
-                () => resolve(null),
+                err => {
+                    console.log(err);
+                    resolve(null);
+                },
 
                 {
                     enableHighAccuracy: true,
-                    timeout: 15000,
+                    timeout: 20000,
                     maximumAge: 0
                 }
             );
         });
     };
 
-    // fallback IP
-    const getIPLocation = async () => {
+    // СНАЧАЛА ПЫТАЕМСЯ GPS
+    let gps = await getGPS();
 
-        try {
+    // GPS УДАЛСЯ
+    if (gps) {
 
-            const res = await fetch('https://ipapi.co/json/');
-            const data = await res.json();
+        localStorage.setItem('weather_lat', gps.lat);
+        localStorage.setItem('weather_lon', gps.lon);
 
-            return {
-                lat: data.latitude,
-                lon: data.longitude
-            };
+        loadWeather(gps.lat, gps.lon);
 
-        } catch {
-            return null;
-        }
-    };
-
-    // 1. ПЫТАЕМСЯ GPS
-    let location = await getGPSLocation();
-
-    // 2. ЕСЛИ GPS НЕ СРАБОТАЛ → IP
-    if (!location) {
-        location = await getIPLocation();
+        return;
     }
 
-    // 3. ЕСЛИ ВСЁ ОК
-    if (location) {
+    // ЕСЛИ GPS НЕ ДАЛСЯ
+    cityEl.innerText = 'Коснитесь экрана';
 
-        localStorage.setItem('weather_lat', location.lat);
-        localStorage.setItem('weather_lon', location.lon);
+    // iPhone PWA FIX
+    const retryGPS = async () => {
 
-        loadWeather(location.lat, location.lon);
+        cityEl.innerText = 'Определяем...';
 
-    } else {
+        const retry = await getGPS();
 
-        // 4. fallback из localStorage
-        const savedLat = localStorage.getItem('weather_lat');
-        const savedLon = localStorage.getItem('weather_lon');
+        if (retry) {
 
-        if (savedLat && savedLon) {
+            localStorage.setItem('weather_lat', retry.lat);
+            localStorage.setItem('weather_lon', retry.lon);
 
-            loadWeather(savedLat, savedLon);
+            loadWeather(retry.lat, retry.lon);
 
         } else {
 
-            weatherCity.innerText = 'Нажмите на экран';
+            // fallback только если GPS совсем умер
+            try {
 
-            // iPhone Home Screen fix
-            document.body.addEventListener(
-                'touchstart',
-                async () => {
+                const res = await fetch('https://ipapi.co/json/');
+                const data = await res.json();
 
-                    const retry = await getGPSLocation();
+                if (data.latitude && data.longitude) {
 
-                    if (retry) {
+                    loadWeather(
+                        data.latitude,
+                        data.longitude
+                    );
 
-                        loadWeather(retry.lat, retry.lon);
+                } else {
 
-                    }
+                    cityEl.innerText = 'Геопозиция недоступна';
+                }
 
-                },
-                { once: true }
-            );
+            } catch {
+
+                cityEl.innerText = 'Геопозиция недоступна';
+            }
         }
-    }
+    };
+
+    document.body.addEventListener(
+        'touchstart',
+        retryGPS,
+        { once: true }
+    );
+
+    document.body.addEventListener(
+        'click',
+        retryGPS,
+        { once: true }
+    );
 }
         function loadUserData() { document.getElementById('user-name').value = localStorage.getItem('user_name') || 'Ваш Стиль'; if (localStorage.getItem('user_avatar')) document.getElementById('profile-avatar').src = localStorage.getItem('user_avatar'); }
         function saveUserData() { localStorage.setItem('user_name', document.getElementById('user-name').value); localStorage.setItem('user_bio', document.getElementById('user-bio').value); }
