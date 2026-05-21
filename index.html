@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -5,16 +7,12 @@
     <title>AI Wardrobe</title>
 
     <!-- iOS HOME SCREEN ICONS (FIXED) -->
-<link rel="apple-touch-icon" sizes="180x180" href="https://i.imgur.com/8QZ7y1m.png">
-<link rel="apple-touch-icon" sizes="152x152" href="https://i.imgur.com/8QZ7y1m.png">
-<link rel="apple-touch-icon" sizes="120x120" href="https://i.imgur.com/8QZ7y1m.png">
+<link rel="icon" type="image/jpeg" href="./foro.jpeg">
+<link rel="apple-touch-icon" href="./foro.jpeg">
 
-<link rel="icon" type="image/png" sizes="32x32" href="https://i.imgur.com/8QZ7y1m.png">
-<link rel="icon" type="image/png" sizes="16x16" href="https://i.imgur.com/8QZ7y1m.png">
-
-<meta name="apple-mobile-web-app-title" content="Wardrobe AI">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b1b3a">
 
     <!-- LIBS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -831,12 +829,12 @@
 
             const d = await res.json();
 
-            document.getElementById('weather-city').innerText = d.name;
-            document.getElementById('weather-temp').innerText = Math.round(d.main.temp) + '°';
-            document.getElementById('weather-desc').innerText = d.weather[0].description;
-            document.getElementById('weather-hum').innerText = `Влажность: ${d.main.humidity}%`;
+            document.getElementById('weather-city').innerText = d.name || 'Город';
+            document.getElementById('weather-temp').innerText = Math.round(d.main?.temp || 0) + '°';
+            document.getElementById('weather-desc').innerText = d.weather?.[0]?.description || '';
+            document.getElementById('weather-hum').innerText = `Влажность: ${d.main?.humidity || 0}%`;
             document.getElementById('weather-day').innerText =
-                `Сегодня: ${Math.round(d.main.temp_max)}° / ${Math.round(d.main.temp_min)}°`;
+                `Сегодня: ${Math.round(d.main?.temp_max || 0)}° / ${Math.round(d.main?.temp_min || 0)}°`;
 
             const forecastRes = await fetch(
                 `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${WEATHER_KEY}`
@@ -844,12 +842,16 @@
 
             const forecastData = await forecastRes.json();
 
+            if (!forecastData.list) return;
+
             const hourlyHtml = forecastData.list.slice(0, 10).map(h => {
 
                 const time = new Date(h.dt * 1000).getHours() + ":00";
 
+                const iconCode = h.weather?.[0]?.icon || "01d";
+
                 const icon =
-                    `https://openweathermap.org/img/wn/${h.weather[0].icon}@2x.png`;
+                    `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
 
                 return `
                     <div class="weather-card flex-shrink-0">
@@ -857,10 +859,14 @@
                             ${time}
                         </span>
 
-                        <img src="${icon}" class="w-10 h-10 mx-auto weather-icon-img">
+                        <img 
+                            src="${icon}" 
+                            class="w-10 h-10 mx-auto weather-icon-img"
+                            onerror="this.style.display='none'"
+                        >
 
                         <span class="text-sm font-bold text-adaptive">
-                            ${Math.round(h.main.temp)}°
+                            ${Math.round(h.main?.temp || 0)}°
                         </span>
                     </div>
                 `;
@@ -869,61 +875,67 @@
             document.getElementById('weather-hourly').innerHTML = hourlyHtml;
 
         } catch (e) {
-            console.log(e);
+            console.log('weather error:', e);
         }
     };
 
-    const requestLocation = () => {
+    // 🔥 GPS + FALLBACK (ВАЖНО ДЛЯ HOME SCREEN)
+    const getLocation = async () => {
 
-        if (!navigator.geolocation) {
-            document.getElementById('weather-city').innerText = 'Геолокация недоступна';
-            return;
-        }
+        // 1. пробуем GPS
+        const gps = await new Promise((resolve) => {
+            if (!navigator.geolocation) return resolve(null);
 
-        navigator.geolocation.getCurrentPosition(
-
-            async (pos) => {
-
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-
-                localStorage.setItem('weather_lat', lat);
-                localStorage.setItem('weather_lon', lon);
-
-                loadWeather(lat, lon);
-            },
-
-            async () => {
-
-                const savedLat = localStorage.getItem('weather_lat');
-                const savedLon = localStorage.getItem('weather_lon');
-
-                if (savedLat && savedLon) {
-                    loadWeather(savedLat, savedLon);
-                    return;
+            navigator.geolocation.getCurrentPosition(
+                pos => resolve({
+                    lat: pos.coords.latitude,
+                    lon: pos.coords.longitude
+                }),
+                () => resolve(null),
+                {
+                    enableHighAccuracy: false,
+                    timeout: 8000,
+                    maximumAge: 60000
                 }
+            );
+        });
 
-                document.getElementById('weather-city').innerText =
-                    'Разрешите геопозицию';
-            },
+        if (gps) return gps;
 
-            {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0
+        // 2. fallback IP (ВАЖНО для VPN + Home Screen)
+        try {
+            const res = await fetch('https://ipapi.co/json/');
+            const data = await res.json();
+
+            if (data.latitude && data.longitude) {
+                return {
+                    lat: data.latitude,
+                    lon: data.longitude
+                };
             }
-        );
+        } catch (e) {}
+
+        return null;
     };
 
-    requestLocation();
+    const pos = await getLocation();
 
-    document.body.addEventListener(
-        'click',
-        () => {
-            requestLocation();
-        },
-        { once: true }
-    );
+    if (pos) {
+        localStorage.setItem('weather_lat', pos.lat);
+        localStorage.setItem('weather_lon', pos.lon);
+        loadWeather(pos.lat, pos.lon);
+    } else {
+        document.getElementById('weather-city').innerText = 'Не удалось определить';
+    }
+
+    // мягкий повтор (чтобы Home Screen не был пустой)
+    setTimeout(() => {
+        if (!document.getElementById('weather-temp').innerText.includes('°')) {
+            const lat = localStorage.getItem('weather_lat');
+            const lon = localStorage.getItem('weather_lon');
+            if (lat && lon) loadWeather(lat, lon);
+        }
+    }, 2000);
 }
         function loadUserData() { document.getElementById('user-name').value = localStorage.getItem('user_name') || 'Ваш Стиль'; if (localStorage.getItem('user_avatar')) document.getElementById('profile-avatar').src = localStorage.getItem('user_avatar'); }
         function saveUserData() { localStorage.setItem('user_name', document.getElementById('user-name').value); localStorage.setItem('user_bio', document.getElementById('user-bio').value); }
