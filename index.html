@@ -230,11 +230,23 @@
     class="glass rounded-xl px-3 py-2 text-xs mt-3"
 >
 
-    <option>Moscow</option>
-    <option>Saint Petersburg</option>
-    <option>Kazan</option>
-    <option>Chelyabinsk</option>
-    <option>Novosibirsk</option>
+   <option value="Moscow">Москва</option>
+
+<option value="Saint Petersburg">
+Санкт-Петербург
+</option>
+
+<option value="Kazan">
+Казань
+</option>
+
+<option value="Chelyabinsk">
+Челябинск
+</option>
+
+<option value="Novosibirsk">
+Новосибирск
+</option>
 
 </select>
                             <h2 id="weather-temp" class="text-6xl font-light tracking-tighter mt-1 text-adaptive">--°</h2>
@@ -419,7 +431,23 @@ JSON.parse(localStorage.getItem("custom_categories")) || [
             };
             renderSavedOutfits();
         }
+        async function initWeather() {
 
+    const city =
+        localStorage.getItem(
+            "weather_city"
+        ) || "Moscow";
+
+    const select =
+        document.getElementById(
+            "city-select"
+        );
+
+    if(select)
+        select.value = city;
+
+    loadWeatherByCity(city);
+}
         function initCanvas() {
             const size = Math.min(window.innerWidth - 64, 420);
             canvas = new fabric.Canvas('outfit-canvas', { 
@@ -947,21 +975,13 @@ Return ONLY JSON:
             if (!file) return;
             Swal.fire({
 
-    title:'Обработка одежды',
-
-    html:`
-        <div style="padding:10px">
-            Анализируем вещь<br>
-            Удаляем фон<br>
-            Определяем категорию
-        </div>
-    `,
-
-    allowOutsideClick:false,
+    title:'Загрузка...',
 
     background:'#111',
 
     color:'#fff',
+
+    allowOutsideClick:false,
 
     didOpen:() => {
         Swal.showLoading();
@@ -1035,21 +1055,21 @@ await removeBackgroundWithRetry(file);
             };
         }
 
-        async function removeBackground(file) {
+       async function removeBackground(file) {
+
+    const formData = new FormData();
+
+    formData.append(
+        "image_file",
+        file
+    );
+
+    formData.append(
+        "size",
+        "auto"
+    );
 
     try {
-
-        const formData = new FormData();
-
-        formData.append(
-            "image_file",
-            file
-        );
-
-        formData.append(
-            "size",
-            "auto"
-        );
 
         const response = await fetch(
             "https://api.remove.bg/v1.0/removebg",
@@ -1062,25 +1082,34 @@ await removeBackgroundWithRetry(file);
             }
         );
 
-        if(response.ok){
+        if (!response.ok) {
 
-            const blob =
-                await response.blob();
+            const errorText =
+                await response.text();
 
-            return await blobToBase64(blob);
+            console.log(
+                "remove.bg error:",
+                response.status,
+                errorText
+            );
+
+            return null;
         }
 
+        const blob =
+            await response.blob();
+
+        return await blobToBase64(blob);
+
+    } catch(err) {
+
         console.log(
-            "remove.bg error"
+            "remove.bg exception:",
+            err
         );
 
-    } catch(err){
-
-        console.log(err);
-
+        return null;
     }
-
-    return null;
 }
 async function removeBackgroundWithRetry(file){
 
