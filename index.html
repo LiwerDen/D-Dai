@@ -1057,59 +1057,50 @@ await removeBackgroundWithRetry(file);
 
        async function removeBackground(file) {
 
-    const formData = new FormData();
-
-    formData.append(
-        "image_file",
-        file
-    );
-
-    formData.append(
-        "size",
-        "auto"
-    );
-
     try {
 
-        const response = await fetch(
-            "https://api.remove.bg/v1.0/removebg",
-            {
-                method: "POST",
-                headers: {
-                    "X-Api-Key": REMOVE_BG_KEY
-                },
-                body: formData
-            }
-        );
-
-        if (!response.ok) {
-
-            const errorText =
-                await response.text();
-
-            console.log(
-                "remove.bg error:",
-                response.status,
-                errorText
+        const resultBlob =
+            await window.removeBackgroundLocal(
+                file,
+                {
+                    progress: (key, current, total) => {
+                        console.log(
+                            key,
+                            current,
+                            total
+                        );
+                    }
+                }
             );
 
-            return null;
-        }
-
-        const blob =
-            await response.blob();
-
-        return await blobToBase64(blob);
+        return await blobToBase64(
+            resultBlob
+        );
 
     } catch(err) {
 
-        console.log(
-            "remove.bg exception:",
+        console.error(
+            "Background remove error",
             err
         );
 
         return null;
     }
+}
+function blobToBase64(blob){
+
+    return new Promise(resolve => {
+
+        const reader =
+            new FileReader();
+
+        reader.onloadend = () =>
+            resolve(reader.result);
+
+        reader.readAsDataURL(blob);
+
+    });
+
 }
 async function removeBackgroundWithRetry(file){
 
@@ -1336,5 +1327,10 @@ function deleteItem(id) {
 
         function resetOutfitsOnly() { if(confirm('Удалить сохраненные образы?')) { db.transaction('outfits', 'readwrite').objectStore('outfits').clear().onsuccess = () => refreshData(); } }
     </script>
+    <script type="module">
+import { removeBackground } from "https://cdn.jsdelivr.net/npm/@imgly/background-removal/+esm";
+
+window.removeBackgroundLocal = removeBackground;
+</script>
 </body>
 </html>
