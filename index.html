@@ -503,7 +503,7 @@ JSON.parse(localStorage.getItem("custom_categories")) || [
             canvas.clear();
             canvas.setBackgroundColor('#151515', canvas.renderAll.bind(canvas));
             
-            const center = canvas.width / 2;
+            const center = canvas.getWidth() / 2;
             const bodyColor = '#242424';
             
             const avatarRadius = 50; 
@@ -603,41 +603,143 @@ JSON.parse(localStorage.getItem("custom_categories")) || [
             let scale = 1.0;
             const center = canvas.width / 2;
 
-            if (
-    ["Футболки","Топы","Рубашки","Худи","Свитшоты","Кофты","Куртки","Пальто"]
-    .includes(category)
-);
-else if (
-    ["Джинсы","Брюки","Штаны","Юбки","Шорты"]
-    .includes(category)
-);
-else if (category === "Платья") {
+            if(
+[
+"Футболки",
+"Топы",
+"Рубашки",
+"Худи",
+"Свитшоты",
+"Кофты",
+"Куртки",
+"Пальто"
+].includes(category)
+){
 
-    scale = 160 / img.width;
+    scale = 170 / img.width;
 
     img.scale(scale);
 
     img.set({
+
         left:center,
-        top:170,
+
+        top:140,
+
         originX:'center'
+
     });
+
 }
-else if (
-    ["Кроссовки","Ботинки","Обувь"]
-    .includes(category)
-);
-else if (category === "Сумки") {
+else if(
+[
+"Джинсы",
+"Брюки",
+"Штаны",
+"Юбки",
+"Шорты"
+].includes(category)
+){
+
+    scale = 150 / img.width;
+
+    img.scale(scale);
+
+    img.set({
+
+        left:center,
+
+        top:330,
+
+        originX:'center'
+
+    });
+
+}
+else if(category==="Платья"){
+
+    scale = 180 / img.width;
+
+    img.scale(scale);
+
+    img.set({
+
+        left:center,
+
+        top:170,
+
+        originX:'center'
+
+    });
+
+}
+else if(category==="Платья"){
+
+    scale = 180 / img.width;
+
+    img.scale(scale);
+
+    img.set({
+
+        left:center,
+
+        top:170,
+
+        originX:'center'
+
+    });
+
+}
+else if(category==="Шапки"){
 
     scale = 90 / img.width;
 
     img.scale(scale);
 
     img.set({
-        left:center + 80,
-        top:260,
+
+        left:center,
+
+        top:35,
+
         originX:'center'
+
     });
+
+}
+else if(category==="Сумки"){
+
+    scale = 90 / img.width;
+
+    img.scale(scale);
+
+    img.set({
+
+        left:center + 90,
+
+        top:250,
+
+        originX:'center'
+
+    });
+
+}
+else if(category==="Аксессуары"){
+
+    scale = 70 / img.width;
+
+    img.scale(scale);
+
+    img.set({
+
+        left:center + 70,
+
+        top:130,
+
+        originX:'center'
+
+    });
+
 }
             img.set({
                 clothingCategory: category, hasControls: true, hasBorders: true, 
